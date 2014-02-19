@@ -10,11 +10,36 @@ LIBDIR = .
 CMSIS_LIB=$(LIBDIR)/libraries/CMSIS/$(ARCH)
 STM32_LIB=$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver
 
+# Sources
 CMSIS_PLAT_SRC = $(CMSIS_LIB)/DeviceSupport/$(VENDOR)/$(PLAT)
+
+CMSIS_SRCS = \
+		$(CMSIS_LIB)/CoreSupport/core_cm3.c \
+		$(CMSIS_PLAT_SRC)/system_stm32f10x.c \
+		$(CMSIS_PLAT_SRC)/startup/gcc_ride7/startup_stm32f10x_md.s
+
+STM32_SRCS = \
+		$(STM32_LIB)/src/stm32f10x_rcc.c \
+		$(STM32_LIB)/src/stm32f10x_gpio.c \
+		$(STM32_LIB)/src/stm32f10x_usart.c \
+		$(STM32_LIB)/src/stm32f10x_exti.c \
+		$(STM32_LIB)/src/misc.c
+
+SRCS= \
+		$(CMSIS_SRCS) \
+		$(STM32_SRCS) \
+		context_switch.s \
+		syscall.s \
+		stm32_p103.c \
+		kernel.c
+
+HEADERS =
+
+# Flags
 
 all: main.bin
 
-main.bin: kernel.c context_switch.s syscall.s syscall.h
+main.bin: $(SRCS) $(HEADERS)
 	$(CROSS_COMPILE)gcc \
 		-DUSER_NAME=\"$(USER)\" \
 		-Wl,-Tmain.ld -nostartfiles \
@@ -26,22 +51,8 @@ main.bin: kernel.c context_switch.s syscall.s syscall.h
 		-fno-common -ffreestanding -O0 \
 		-gdwarf-2 -g3 \
 		-mcpu=cortex-m3 -mthumb \
-		-o main.elf \
-		\
-		$(CMSIS_LIB)/CoreSupport/core_cm3.c \
-		$(CMSIS_PLAT_SRC)/system_stm32f10x.c \
-		$(CMSIS_PLAT_SRC)/startup/gcc_ride7/startup_stm32f10x_md.s \
-		$(STM32_LIB)/src/stm32f10x_rcc.c \
-		$(STM32_LIB)/src/stm32f10x_gpio.c \
-		$(STM32_LIB)/src/stm32f10x_usart.c \
-		$(STM32_LIB)/src/stm32f10x_exti.c \
-		$(STM32_LIB)/src/misc.c \
-		\
-		context_switch.s \
-		syscall.s \
-		stm32_p103.c \
-		kernel.c \
-		memcpy.s
+		$(SRCS) \
+		-o main.elf
 	$(CROSS_COMPILE)objcopy -Obinary main.elf main.bin
 	$(CROSS_COMPILE)objdump -S main.elf > main.list
 
