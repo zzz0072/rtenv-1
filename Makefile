@@ -58,7 +58,8 @@ main.bin: $(SRCS) $(HEADERS)
 	$(CROSS_COMPILE)objdump -S main.elf > main.list
 
 qemu: main.bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 -kernel main.bin
+	$(QEMU_STM32) -M stm32-p103 \
+		-kernel main.bin -monitor null
 
 qemudbg: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
