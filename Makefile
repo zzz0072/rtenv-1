@@ -37,23 +37,24 @@ SRCS= \
 HEADERS =
 
 # Flags
-
-all: main.bin
-
-main.bin: $(SRCS) $(HEADERS)
-	$(CROSS_COMPILE)gcc \
+CFLAGS = \
 		-DUSER_NAME=\"$(USER)\" \
-		-Wl,-Tmain.ld -nostartfiles \
-		-I . \
+		-fno-common -ffreestanding -O0 \
+		-gdwarf-2 -g3 \
+		-mcpu=cortex-m3 -mthumb \
+
+INCS =  -I . \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/CoreSupport \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(CMSIS_LIB)/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc \
-		-fno-common -ffreestanding -O0 \
-		-gdwarf-2 -g3 \
-		-mcpu=cortex-m3 -mthumb \
-		$(SRCS) \
-		-o main.elf
+
+
+all: main.bin
+
+main.bin: $(SRCS) $(HEADERS)
+	$(CROSS_COMPILE)gcc -Wl,-Tmain.ld -nostartfiles \
+		$(INCS) $(CFLAGS) $(SRCS) -o main.elf
 	$(CROSS_COMPILE)objcopy -Obinary main.elf main.bin
 	$(CROSS_COMPILE)objdump -S main.elf > main.list
 
