@@ -30,6 +30,7 @@ SRCS= \
 		$(STM32_SRCS) \
 		context_switch.s \
 		syscall.s \
+		memcpy.s \
 		stm32_p103.c \
 		kernel.c
 
@@ -101,4 +102,4 @@ qemuauto_remote: main.bin gdbscript
 	sleep 5
 
 clean:
-	rm -f *.elf *.bin *.list
+	rm -f *.elf *.bin *.list gdb.txt
