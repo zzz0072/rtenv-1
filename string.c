@@ -124,7 +124,7 @@ void printf(const char *fmt_str, ...)
     va_end(param);
 }
 
-#if 0
+#ifndef USE_ASM_OPTI_FUNC
 int strcmp(const char *str_a, const char *str_b)
 {
     int i = 0;

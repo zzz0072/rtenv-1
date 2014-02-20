@@ -31,7 +31,6 @@ STM32_SRCS = \
 RTENV_SRCS = \
 		context_switch.s \
 		syscall.s \
-		memcpy.s \
 		stm32_p103.c \
 		string.c \
 		task.c   \
@@ -57,6 +56,14 @@ CFLAGS += -g3
 CFLAGS += -Wall
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
+
+ifeq ($(USE_ASM_OPTI_FUNC),YES)
+	SRCS+=memcpy.s
+
+	CFLAGS=-DUSE_ASM_OPTI_FUNC
+endif
+
+
 
 # Include PATH
 LIBDIR = .
