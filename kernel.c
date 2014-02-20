@@ -596,6 +596,7 @@ void show_task_info(int argc, char* argv[])
 {
 	char ps_message[]="PID STATUS PRIORITY";
 	int ps_message_length = sizeof(ps_message);
+    char *str_to_output = 0;
 	int task_i;
 	int task;
 
@@ -612,13 +613,13 @@ void show_task_info(int argc, char* argv[])
 		task_info_status[0]='0'+tasks[task_i].status;
 		task_info_status[1]='\0';
 
-		itoa(tasks[task_i].priority, task_info_priority);
+		str_to_output = itoa(tasks[task_i].priority, task_info_priority);
 
 		write(fdout, &task_info_pid , 2);
 		write_blank(3);
 			write(fdout, &task_info_status , 2);
 		write_blank(5);
-		write(fdout, &task_info_priority , 3);
+		write(fdout, str_to_output , 3);
 
 		write(fdout, &next_line , 3);
 	}
