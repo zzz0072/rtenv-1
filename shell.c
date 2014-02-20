@@ -3,6 +3,7 @@
 #include "string.h"
 #include "path_server.h"
 
+/* Internal defines */
 #define MAX_CMDNAME 19
 #define MAX_ARGC 19
 #define MAX_CMDHELP 1023
@@ -12,16 +13,6 @@
 #define MAX_ENVNAME 15
 #define MAX_ENVVALUE 127
 
-extern size_t task_count;
-extern struct task_control_block tasks[TASK_LIMIT];
-
-static char next_line[3] = {'\n','\r','\0'};
-static char cmd[HISTORY_COUNT][CMDBUF_SIZE];
-static int cur_his=0;
-static int fdout;
-static int fdin;
-static int env_count = 0;
-
 /* Command handlers. */
 void export_envvar(int argc, char *argv[]);
 void show_echo(int argc, char *argv[]);
@@ -30,6 +21,9 @@ void show_task_info(int argc, char *argv[]);
 void show_man_page(int argc, char *argv[]);
 void show_history(int argc, char *argv[]);
 
+/**************************
+ * Internal data structures
+***************************/
 /* Enumeration for command types. */
 enum {
     CMD_ECHO = 0,
@@ -48,7 +42,27 @@ typedef struct {
     char description[MAX_CMDHELP + 1];
 } hcmd_entry;
 
-const hcmd_entry cmd_data[CMD_COUNT] = {
+/* Structure for environment variables. */
+typedef struct {
+    char name[MAX_ENVNAME + 1];
+    char value[MAX_ENVVALUE + 1];
+} evar_entry;
+
+
+/************************
+ * Global variables
+*************************/
+extern size_t task_count;
+extern struct task_control_block tasks[TASK_LIMIT];
+
+static char next_line[3] = {'\n','\r','\0'};
+static char cmd[HISTORY_COUNT][CMDBUF_SIZE];
+static int cur_his=0;
+static int fdout;
+static int fdin;
+static int env_count = 0;
+
+static const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
     [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
     [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
@@ -57,13 +71,7 @@ const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_PS] = {.cmd = "ps", .func = show_task_info, .description = "List all the processes."}
 };
 
-/* Structure for environment variables. */
-typedef struct {
-    char name[MAX_ENVNAME + 1];
-    char value[MAX_ENVVALUE + 1];
-} evar_entry;
-
-evar_entry env_var[MAX_ENVCOUNT];
+static evar_entry env_var[MAX_ENVCOUNT];
 
 void find_events()
 {
