@@ -228,7 +228,7 @@ static void check_keyword()
     }
 }
 
-static int write_blank(int blank_num)
+static void write_blank(int blank_num)
 {
     char blank[] = " ";
     int blank_count = 0;
@@ -288,7 +288,6 @@ void show_task_info(int argc, char* argv[])
     int ps_message_length = sizeof(ps_message);
     char *str_to_output = 0;
     int task_i;
-    int task;
 
     write(fdout, &ps_message , ps_message_length);
     write(fdout, &next_line , 3);
@@ -398,7 +397,6 @@ void serial_test_task()
     char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
     int hint_length = sizeof(hint);
     char *p = NULL;
-    int cmd_count = 0;
 
     fdout = mq_open("/tmp/mqueue/out", 0);
     fdin = open("/dev/tty0/in", 0);

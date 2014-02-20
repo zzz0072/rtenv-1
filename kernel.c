@@ -1,5 +1,6 @@
 #include <stddef.h>
 #include "stm32f10x.h"
+#include "stm32_p103.h"
 #include "RTOSConfig.h"
 
 /* rtenv related */
