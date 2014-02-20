@@ -34,6 +34,7 @@ RTENV_SRCS = \
 		stm32_p103.c \
 		string.c \
 		task.c   \
+		serial.c \
 		path_server.c \
 		kernel.c
 
@@ -50,6 +51,7 @@ HEADERS = \
 		string.h         \
 		task.h           \
 		path_server.h    \
+		serial.h         \
 		syscall_def.h    \
 		syscall.h
 
