@@ -41,7 +41,11 @@ SRCS= \
 	$(RTENV_SRCS)
 
 # Header files
-HEADERS =
+HEADERS = \
+		RTOSConfig.h     \
+		stm32f10x_conf.h \
+		stm32_p103.h     \
+		syscall.h
 
 # Basic configurations
 CFLAGS += -g3
