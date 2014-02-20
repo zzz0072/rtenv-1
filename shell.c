@@ -73,7 +73,10 @@ static const hcmd_entry cmd_data[CMD_COUNT] = {
 
 static evar_entry env_var[MAX_ENVCOUNT];
 
-void find_events()
+/************************
+ * Internal functions
+*************************/
+static void find_events()
 {
     char buf[CMDBUF_SIZE];
     char *p = cmd[cur_his];
@@ -99,7 +102,7 @@ void find_events()
 }
 
 /* Split command into tokens. */
-char *cmdtok(char *cmd)
+static char *cmdtok(char *cmd)
 {
     static char *cur = NULL;
     static char *end = NULL;
@@ -127,7 +130,7 @@ char *cmdtok(char *cmd)
     return cur;
 }
 
-char *find_envvar(const char *name)
+static char *find_envvar(const char *name)
 {
     int i;
 
@@ -140,7 +143,7 @@ char *find_envvar(const char *name)
 }
 
 /* Fill in entire value of argument. */
-int fill_arg(char *const dest, const char *argv)
+static int fill_arg(char *const dest, const char *argv)
 {
     char env_name[MAX_ENVNAME + 1];
     char *buf = dest;
@@ -182,7 +185,7 @@ int fill_arg(char *const dest, const char *argv)
     return buf - dest;
 }
 
-void check_keyword()
+static void check_keyword()
 {
     char *argv[MAX_ARGC + 1] = {NULL};
     char cmdstr[CMDBUF_SIZE];
@@ -225,6 +228,20 @@ void check_keyword()
     }
 }
 
+static int write_blank(int blank_num)
+{
+    char blank[] = " ";
+    int blank_count = 0;
+
+    while (blank_count <= blank_num) {
+        write(fdout, blank, sizeof(blank));
+        blank_count++;
+    }
+}
+
+/************************
+ * Command handlers
+*************************/
 void echo()
 {
     int fdout;
@@ -237,44 +254,6 @@ void echo()
     while (1) {
         read(fdin, &c, 1);
         write(fdout, &c, 1);
-    }
-}
-
-void serial_test_task()
-{
-    char put_ch[2]={'0','\0'};
-    char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
-    int hint_length = sizeof(hint);
-    char *p = NULL;
-    int cmd_count = 0;
-
-    fdout = mq_open("/tmp/mqueue/out", 0);
-    fdin = open("/dev/tty0/in", 0);
-
-    for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
-        p = cmd[cur_his];
-        write(fdout, hint, hint_length);
-
-        while (1) {
-            read(fdin, put_ch, 1);
-
-            if (put_ch[0] == '\r' || put_ch[0] == '\n') {
-                *p = '\0';
-                write(fdout, next_line, 3);
-                break;
-            }
-            else if (put_ch[0] == 127 || put_ch[0] == '\b') {
-                if (p > cmd[cur_his]) {
-                    p--;
-                    write(fdout, "\b \b", 4);
-                }
-            }
-            else if (p - cmd[cur_his] < CMDBUF_SIZE - 1) {
-                *p++ = put_ch[0];
-                write(fdout, put_ch, 2);
-            }
-        }
-        check_keyword();
     }
 }
 
@@ -299,17 +278,6 @@ void export_envvar(int argc, char *argv[])
             strcpy(env_var[env_count].value, value);
             env_count++;
         }
-    }
-}
-
-int write_blank(int blank_num)
-{
-    char blank[] = " ";
-    int blank_count = 0;
-
-    while (blank_count <= blank_num) {
-        write(fdout, blank, sizeof(blank));
-        blank_count++;
     }
 }
 
@@ -418,6 +386,47 @@ void show_history(int argc, char *argv[])
             write(fdout, cmd[i % HISTORY_COUNT], strlen(cmd[i % HISTORY_COUNT]) + 1);
             write(fdout, next_line, 3);
         }
+    }
+}
+
+/**************************
+ * task to handle commands
+***************************/
+void serial_test_task()
+{
+    char put_ch[2]={'0','\0'};
+    char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
+    int hint_length = sizeof(hint);
+    char *p = NULL;
+    int cmd_count = 0;
+
+    fdout = mq_open("/tmp/mqueue/out", 0);
+    fdin = open("/dev/tty0/in", 0);
+
+    for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
+        p = cmd[cur_his];
+        write(fdout, hint, hint_length);
+
+        while (1) {
+            read(fdin, put_ch, 1);
+
+            if (put_ch[0] == '\r' || put_ch[0] == '\n') {
+                *p = '\0';
+                write(fdout, next_line, 3);
+                break;
+            }
+            else if (put_ch[0] == 127 || put_ch[0] == '\b') {
+                if (p > cmd[cur_his]) {
+                    p--;
+                    write(fdout, "\b \b", 4);
+                }
+            }
+            else if (p - cmd[cur_his] < CMDBUF_SIZE - 1) {
+                *p++ = put_ch[0];
+                write(fdout, put_ch, 2);
+            }
+        }
+        check_keyword();
     }
 }
 
