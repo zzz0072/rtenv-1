@@ -20,6 +20,7 @@ static char cmd[HISTORY_COUNT][CMDBUF_SIZE];
 static int cur_his=0;
 static int fdout;
 static int fdin;
+static int env_count = 0;
 
 /* Command handlers. */
 void export_envvar(int argc, char *argv[]);
@@ -39,12 +40,14 @@ enum {
     CMD_PS,
     CMD_COUNT
 } CMD_TYPE;
+
 /* Structure for command handler. */
 typedef struct {
     char cmd[MAX_CMDNAME + 1];
     void (*func)(int, char**);
     char description[MAX_CMDHELP + 1];
 } hcmd_entry;
+
 const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
     [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
@@ -59,8 +62,8 @@ typedef struct {
     char name[MAX_ENVNAME + 1];
     char value[MAX_ENVVALUE + 1];
 } evar_entry;
+
 evar_entry env_var[MAX_ENVCOUNT];
-int env_count = 0;
 
 void echo()
 {
