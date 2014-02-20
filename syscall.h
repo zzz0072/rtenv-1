@@ -1,3 +1,5 @@
+#ifndef SYSCALL_H_20130919
+#define SYSCALL_H_20130919
 #include <stddef.h>
 
 void *activate(void *stack);
@@ -16,3 +18,4 @@ int setpriority(int who, int value);
 int mknod(int fd, int mode, int dev);
 
 void sleep(unsigned int);
+#endif /* SYSCALL_H_20130919 */
