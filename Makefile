@@ -47,6 +47,7 @@ HEADERS = \
 		stm32f10x_conf.h \
 		stm32_p103.h     \
 		string.h         \
+		syscall_def.h    \
 		syscall.h
 
 # Basic configurations
