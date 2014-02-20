@@ -23,7 +23,7 @@ void first()
     if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
     if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
     if (!fork()) rs232_xmit_msg_task();
-    if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), serial_test_task();
+    if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), shell_task();
 
     setpriority(0, PRIORITY_LIMIT);
 

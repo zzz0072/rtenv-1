@@ -391,7 +391,7 @@ void show_history(int argc, char *argv[])
 /**************************
  * task to handle commands
 ***************************/
-void serial_test_task()
+void shell_task()
 {
     char put_ch[2]={'0','\0'};
     char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
