@@ -59,7 +59,7 @@ void printf(const char *fmt_str, ...)
 {
     va_list param = {0};
 
-    char  param_chr[] = {0, 0}; 
+    char  param_chr[] = {0, 0};
     int   param_int = 0;
 
     char itoa_buf[MAX_ITOA_CHARS] = {0};

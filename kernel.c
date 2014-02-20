@@ -20,7 +20,7 @@
 #define PATH_MAX   32 /* Longest absolute path */
 #define PIPE_LIMIT (TASK_LIMIT * 2)
 
-#define PATHSERVER_FD (TASK_LIMIT + 3) 
+#define PATHSERVER_FD (TASK_LIMIT + 3)
 /* File descriptor of pipe to pathserver */
 
 #define S_IFIFO 1
@@ -67,7 +67,7 @@ const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
     [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
     [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
-    [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."}, 
+    [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
     [CMD_MAN] = {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
     [CMD_PS] = {.cmd = "ps", .func = show_task_info, .description = "List all the processes."}
 };
@@ -80,7 +80,7 @@ typedef struct {
 evar_entry env_var[MAX_ENVCOUNT];
 int env_count = 0;
 
-/* 
+/*
  * pathserver assumes that all files are FIFOs that were registered
  * with mkfifo.  It also assumes a global tables of FDs shared by all
  * processes.  It would have to get much smarter to be generally useful.
@@ -371,7 +371,7 @@ void serial_test_task()
                 write(fdout, put_ch, 2);
             }
         }
-        check_keyword();    
+        check_keyword();
     }
 }
 

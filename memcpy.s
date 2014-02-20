@@ -8,10 +8,10 @@ memcpy:
     it      lo
     lslslo  r2, r2, #30         /* Adjust r2 for less_than_4_bytes */
     blo     less_than_4_bytes
-    
+
     ands    r3, r1, #3
     beq     aligned
-    
+
     negs    r3, r3              /* Next aligned offset = (4 - src & 3) & 3 */
     lsls    r3, r3, #31
     ittt    cs
@@ -25,14 +25,14 @@ memcpy:
 
 aligned:
     push    {r4 - r10}
-    subs     r2, #32         
+    subs     r2, #32
     blo     less_than_32_bytes
 L:
     ldmia     r1!, {r3 - r10}
-    subs     r2, #32         
+    subs     r2, #32
     stmia    r0!, {r3 - r10}
     bhs     L
-                    
+
 less_than_32_bytes:
     lsls    r2, r2, #28
     it      cs
@@ -43,14 +43,14 @@ less_than_32_bytes:
     stmiacs    r0!, {r3 - r6}
     it      mi
     stmiami r0!, {r7 - r8}
-    
+
     lsls    r2, r2, #2
     itt     cs
     ldrcs   r3, [r1], #4        /* Load if 4 bytes remained */
     strcs   r3, [r0], #4
-    
+
     pop     {r4 - r10}
-    
+
 less_than_4_bytes:
     it      ne
     ldrne   r3, [r1]            /* Load if ether 2 bytes or 1 byte remained */
@@ -60,6 +60,6 @@ less_than_4_bytes:
     lsrcs   r3, r3, 16
     it      mi
     strbmi  r3, [r0],#1            /* Save if 1 byte remained */
-    
-    pop     {r0}                
-    bx      lr                
+
+    pop     {r0}
+    bx      lr
