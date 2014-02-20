@@ -33,6 +33,7 @@ RTENV_SRCS = \
 		syscall.s \
 		memcpy.s \
 		stm32_p103.c \
+		string.c \
 		kernel.c
 
 SRCS= \
@@ -45,6 +46,7 @@ HEADERS = \
 		RTOSConfig.h     \
 		stm32f10x_conf.h \
 		stm32_p103.h     \
+		string.h         \
 		syscall.h
 
 # Basic configurations

@@ -1,64 +1,10 @@
+#include <stddef.h>
 #include "stm32f10x.h"
 #include "RTOSConfig.h"
 
+/* rtenv related */
 #include "syscall.h"
-
-#include <stddef.h>
-
-void *memcpy(void *dest, const void *src, size_t n);
-
-int strcmp(const char *a, const char *b) __attribute__ ((naked));
-int strcmp(const char *a, const char *b)
-{
-	asm(
-        "strcmp_lop:                \n"
-        "   ldrb    r2, [r0],#1     \n"
-        "   ldrb    r3, [r1],#1     \n"
-        "   cmp     r2, #1          \n"
-        "   it      hi              \n"
-        "   cmphi   r2, r3          \n"
-        "   beq     strcmp_lop      \n"
-		"	sub     r0, r2, r3  	\n"
-        "   bx      lr              \n"
-		:::
-	);
-}
-
-int strncmp(const char *a, const char *b, size_t n)
-{
-	size_t i;
-
-	for (i = 0; i < n; i++)
-		if (a[i] != b[i])
-			return a[i] - b[i];
-
-	return 0;
-}
-
-size_t strlen(const char *s) __attribute__ ((naked));
-size_t strlen(const char *s)
-{
-	asm(
-		"	sub  r3, r0, #1			\n"
-        "strlen_loop:               \n"
-		"	ldrb r2, [r3, #1]!		\n"
-		"	cmp  r2, #0				\n"
-        "   bne  strlen_loop        \n"
-		"	sub  r0, r3, r0			\n"
-		"	bx   lr					\n"
-		:::
-	);
-}
-
-void puts(char *s)
-{
-	while (*s) {
-		while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
-			/* wait */ ;
-		USART_SendData(USART2, *s);
-		s++;
-	}
-}
+#include "string.h"
 
 #define MAX_CMDNAME 19
 #define MAX_ARGC 19
@@ -659,14 +605,14 @@ void show_task_info(int argc, char* argv[])
 	for (task_i = 0; task_i < task_count; task_i++) {
 		char task_info_pid[2];
 		char task_info_status[2];
-		char task_info_priority[3];
+		char task_info_priority[MAX_ITOA_CHARS];
 
 		task_info_pid[0]='0'+tasks[task_i].pid;
 		task_info_pid[1]='\0';
 		task_info_status[0]='0'+tasks[task_i].status;
-		task_info_status[1]='\0';			
+		task_info_status[1]='\0';
 
-		itoa(tasks[task_i].priority, task_info_priority, 10);
+		itoa(tasks[task_i].priority, task_info_priority);
 
 		write(fdout, &task_info_pid , 2);
 		write_blank(3);
@@ -676,28 +622,6 @@ void show_task_info(int argc, char* argv[])
 
 		write(fdout, &next_line , 3);
 	}
-}
-
-//this function helps to show int
-
-void itoa(int n, char *dst, int base)
-{
-	char buf[33] = {0};
-	char *p = &buf[32];
-
-	if (n == 0)
-		*--p = '0';
-	else {
-		char *q;
-		unsigned int num = (base == 10 && num < 0) ? -n : n;
-
-		for (; num; num/=base)
-			*--p = "0123456789ABCDEF" [num % base];
-		if (base == 10 && n < 0)
-			*--p = '-';
-	}
-
-	strcpy(dst, p);
 }
 
 //help
