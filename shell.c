@@ -257,7 +257,7 @@ void echo()
     }
 }
 
-//export
+/* export */
 void export_envvar(int argc, char *argv[])
 {
     char *found;
@@ -281,7 +281,7 @@ void export_envvar(int argc, char *argv[])
     }
 }
 
-//ps
+/* ps */
 void show_task_info(int argc, char* argv[])
 {
     char ps_message[]="PID STATUS PRIORITY";
@@ -314,7 +314,7 @@ void show_task_info(int argc, char* argv[])
     }
 }
 
-//help
+/* help */
 
 void show_cmd_info(int argc, char* argv[])
 {
@@ -330,7 +330,7 @@ void show_cmd_info(int argc, char* argv[])
     }
 }
 
-//echo
+/* echo */
 void show_echo(int argc, char* argv[])
 {
     const int _n = 1; /* Flag for "-n" option. */
@@ -354,7 +354,7 @@ void show_echo(int argc, char* argv[])
         write(fdout, next_line, 3);
 }
 
-//man
+/* man */
 void show_man_page(int argc, char *argv[])
 {
     int i;
