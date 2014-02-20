@@ -1,16 +1,18 @@
+# Toolchain configuration
 CROSS_COMPILE ?= arm-none-eabi-
 CC := $(CROSS_COMPILE)gcc
+
+# QEMU PATH
 QEMU_STM32 ?= ../qemu_stm32/arm-softmmu/qemu-system-arm
 
+# Platform architecture
 ARCH = CM3
 VENDOR = ST
 PLAT = STM32F10x
 
-LIBDIR = .
-CMSIS_LIB=$(LIBDIR)/libraries/CMSIS/$(ARCH)
-STM32_LIB=$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver
+CFLAGS += -mcpu=cortex-m3 -mthumb
 
-# Sources
+# Start up and BSP files
 CMSIS_PLAT_SRC = $(CMSIS_LIB)/DeviceSupport/$(VENDOR)/$(PLAT)
 
 CMSIS_SRCS = \
@@ -25,23 +27,32 @@ STM32_SRCS = \
 		$(STM32_LIB)/src/stm32f10x_exti.c \
 		$(STM32_LIB)/src/misc.c
 
-SRCS= \
-		$(CMSIS_SRCS) \
-		$(STM32_SRCS) \
+# rtenv sources
+RTENV_SRCS = \
 		context_switch.s \
 		syscall.s \
 		memcpy.s \
 		stm32_p103.c \
 		kernel.c
 
+SRCS= \
+	$(CMSIS_SRCS) \
+	$(STM32_SRCS) \
+	$(RTENV_SRCS)
+
+# Header files
 HEADERS =
 
-# Flags
-CFLAGS = \
-		-DUSER_NAME=\"$(USER)\" \
-		-fno-common -ffreestanding -O0 \
-		-gdwarf-2 -g3 \
-		-mcpu=cortex-m3 -mthumb \
+# Basic configurations
+CFLAGS += -g3
+CFLAGS += -Wall
+CFLAGS += -DUSER_NAME=\"$(USER)\"
+CFLAGS += -fno-common -ffreestanding -O0
+
+# Include PATH
+LIBDIR = .
+CMSIS_LIB=$(LIBDIR)/libraries/CMSIS/$(ARCH)
+STM32_LIB=$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver
 
 INCS =  -I . \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/CoreSupport \
@@ -49,7 +60,7 @@ INCS =  -I . \
 		-I$(CMSIS_LIB)/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc \
 
-
+#----------------------------------------------------------------------------------
 all: main.bin
 
 main.bin: $(SRCS) $(HEADERS)
