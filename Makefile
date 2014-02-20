@@ -34,6 +34,7 @@ RTENV_SRCS = \
 		memcpy.s \
 		stm32_p103.c \
 		string.c \
+		task.c   \
 		kernel.c
 
 SRCS= \
@@ -47,6 +48,7 @@ HEADERS = \
 		stm32f10x_conf.h \
 		stm32_p103.h     \
 		string.h         \
+		task.h           \
 		syscall_def.h    \
 		syscall.h
 
