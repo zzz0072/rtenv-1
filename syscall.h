@@ -1,6 +1,7 @@
 #ifndef SYSCALL_H_20130919
 #define SYSCALL_H_20130919
 #include <stddef.h>
+#include "syscall_def.h"
 
 void *activate(void *stack);
 
