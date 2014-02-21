@@ -1,5 +1,5 @@
 #include <stdarg.h> /* For variable list */
-#include "string.h"
+#include "rt_string.h"
 #include "syscall.h"
 
 /* TODO: Modulize kernel.c */

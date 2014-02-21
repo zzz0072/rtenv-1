@@ -5,7 +5,7 @@
 
 /* rtenv related */
 #include "syscall.h"
-#include "string.h"
+#include "rt_string.h"
 #include "task.h"
 #include "path_server.h"
 #include "serial.h"

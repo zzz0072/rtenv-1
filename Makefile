@@ -32,7 +32,7 @@ RTENV_SRCS = \
 		context_switch.s \
 		syscall.s \
 		stm32_p103.c \
-		string.c \
+		rt_string.c \
 		task.c   \
 		serial.c \
 		path_server.c \
@@ -49,7 +49,7 @@ HEADERS = \
 		RTOSConfig.h     \
 		stm32f10x_conf.h \
 		stm32_p103.h     \
-		string.h         \
+		rt_string.h      \
 		task.h           \
 		path_server.h    \
 		serial.h         \

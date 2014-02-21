@@ -1,6 +1,7 @@
 #include <stddef.h>
+#include <string.h>
 #include "syscall.h"
-#include "string.h"
+#include "rt_string.h"
 #include "path_server.h"
 
 /* Internal defines */

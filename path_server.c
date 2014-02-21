@@ -1,5 +1,5 @@
 #include "path_server.h"
-#include "string.h"
+#include "rt_string.h"
 #include "syscall.h"
 /*
  * pathserver assumes that all files are FIFOs that were registered

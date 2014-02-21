@@ -1,5 +1,5 @@
 #include <task.h>
-#include <string.h>
+#include <rt_string.h>
 #include <syscall.h>
 
 unsigned int *init_task(unsigned int *stack, void (*start)())
