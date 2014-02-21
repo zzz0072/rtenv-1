@@ -56,7 +56,6 @@ typedef struct {
 extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
-static char next_line[3] = {'\n','\r','\0'};
 static char cmd[HISTORY_COUNT][CMDBUF_SIZE];
 static int cur_his=0;
 static int fdout;
@@ -223,20 +222,7 @@ static void check_keyword()
         }
     }
     if (i == CMD_COUNT) {
-        write(fdout, argv[0], strlen(argv[0]) + 1);
-        write(fdout, ": command not found", 20);
-        write(fdout, next_line, 3);
-    }
-}
-
-static void write_blank(int blank_num)
-{
-    char blank[] = " ";
-    int blank_count = 0;
-
-    while (blank_count <= blank_num) {
-        write(fdout, blank, sizeof(blank));
-        blank_count++;
+        printf("%s: command not found\n\r", argv[0]);
     }
 }
 
@@ -285,13 +271,11 @@ void export_envvar(int argc, char *argv[])
 /* ps */
 void show_task_info(int argc, char* argv[])
 {
-    char ps_message[]="PID STATUS PRIORITY";
-    int ps_message_length = sizeof(ps_message);
+    char ps_message[]="PID\tSTATUS\tPRIORITY";
     char *str_to_output = 0;
     int task_i;
 
-    write(fdout, &ps_message , ps_message_length);
-    write(fdout, &next_line , 3);
+    printf("%s\n\r", ps_message);
 
     for (task_i = 0; task_i < task_count; task_i++) {
         char task_info_pid[2];
@@ -305,13 +289,7 @@ void show_task_info(int argc, char* argv[])
 
         str_to_output = itoa(tasks[task_i].priority, task_info_priority);
 
-        write(fdout, &task_info_pid , 2);
-        write_blank(3);
-            write(fdout, &task_info_status , 2);
-        write_blank(5);
-        write(fdout, str_to_output , 3);
-
-        write(fdout, &next_line , 3);
+        printf("%s\t%s\t%s\n\r", task_info_pid, task_info_status, str_to_output);
     }
 }
 
@@ -319,15 +297,11 @@ void show_task_info(int argc, char* argv[])
 
 void show_cmd_info(int argc, char* argv[])
 {
-    const char help_desp[] = "This system has commands as follow\n\r\0";
     int i;
 
-    write(fdout, &help_desp, sizeof(help_desp));
+    printf("This system has commands as follow\n\r");
     for (i = 0; i < CMD_COUNT; i++) {
-        write(fdout, cmd_data[i].cmd, strlen(cmd_data[i].cmd) + 1);
-        write(fdout, ": ", 3);
-        write(fdout, cmd_data[i].description, strlen(cmd_data[i].description) + 1);
-        write(fdout, next_line, 3);
+        printf("%s: %s\n\r", cmd_data[i].cmd, cmd_data[i].description);
     }
 }
 
@@ -346,13 +320,13 @@ void show_echo(int argc, char* argv[])
     }
 
     for (; i < argc; i++) {
-        write(fdout, argv[i], strlen(argv[i]) + 1);
+        printf("%s", argv[i]);
         if (i < argc - 1)
-            write(fdout, " ", 2);
+            printf(" ");
     }
 
     if (~flag & _n)
-        write(fdout, next_line, 3);
+        printf("\n\r");
 }
 
 /* man */
@@ -369,12 +343,7 @@ void show_man_page(int argc, char *argv[])
     if (i >= CMD_COUNT)
         return;
 
-    write(fdout, "NAME: ", 7);
-    write(fdout, cmd_data[i].cmd, strlen(cmd_data[i].cmd) + 1);
-    write(fdout, next_line, 3);
-    write(fdout, "DESCRIPTION: ", 14);
-    write(fdout, cmd_data[i].description, strlen(cmd_data[i].description) + 1);
-    write(fdout, next_line, 3);
+    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", cmd_data[i].cmd, cmd_data[i].description);
 }
 
 void show_history(int argc, char *argv[])
@@ -383,8 +352,7 @@ void show_history(int argc, char *argv[])
 
     for (i = cur_his + 1; i <= cur_his + HISTORY_COUNT; i++) {
         if (cmd[i % HISTORY_COUNT][0]) {
-            write(fdout, cmd[i % HISTORY_COUNT], strlen(cmd[i % HISTORY_COUNT]) + 1);
-            write(fdout, next_line, 3);
+            printf("%s\n\r", cmd[i % HISTORY_COUNT]);
         }
     }
 }
@@ -404,25 +372,25 @@ void shell_task()
 
     for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
         p = cmd[cur_his];
-        write(fdout, hint, hint_length);
+        printf("%s", hint);
 
         while (1) {
             read(fdin, put_ch, 1);
 
             if (put_ch[0] == '\r' || put_ch[0] == '\n') {
                 *p = '\0';
-                write(fdout, next_line, 3);
+                printf("\n\r");
                 break;
             }
             else if (put_ch[0] == 127 || put_ch[0] == '\b') {
                 if (p > cmd[cur_his]) {
                     p--;
-                    write(fdout, "\b \b", 4);
+                    printf("\b \b");
                 }
             }
             else if (p - cmd[cur_his] < CMDBUF_SIZE - 1) {
                 *p++ = put_ch[0];
-                write(fdout, put_ch, 2);
+                printf("%s", put_ch);
             }
         }
         check_keyword();
