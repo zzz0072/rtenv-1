@@ -1,9 +1,10 @@
 #include <stddef.h>
-#include <string.h>
-#include "syscall.h"
-#include "rt_string.h"
-#include "path_server.h"
 #include <ctype.h>
+#include <string.h>
+#include "path_server.h"
+#include "rt_string.h"
+#include "syscall.h"
+
 /* Internal defines */
 #define MAX_CMDNAME 19
 #define MAX_ARGC 19
@@ -295,7 +296,6 @@ void show_task_info(int argc, char* argv[])
 }
 
 /* help */
-
 void show_cmd_info(int argc, char* argv[])
 {
     int i;
@@ -395,5 +395,4 @@ void shell_task()
         check_keyword();
     }
 }
-
 
