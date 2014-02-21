@@ -3,7 +3,7 @@
 #include "syscall.h"
 #include "rt_string.h"
 #include "path_server.h"
-
+#include <ctype.h>
 /* Internal defines */
 #define MAX_CMDNAME 19
 #define MAX_ARGC 19
@@ -87,7 +87,7 @@ static void find_events()
     for (; *p; p++) {
         if (*p == '!') {
             q = p;
-            while (*q && !isspace(*q))
+            while (*q && !isspace((unsigned char)*q))
                 q++;
             for (i = cur_his + HISTORY_COUNT - 1; i > cur_his; i--) {
                 if (!strncmp(cmd[i % HISTORY_COUNT], p + 1, q - p - 1)) {
@@ -118,7 +118,7 @@ static char *cmdtok(char *cmd)
                     quo = *end;
                 *end = '\0';
             }
-            else if (isspace(*end) && !quo)
+            else if (isspace((unsigned char)*end) && !quo)
                 *end = '\0';
         }
     }
@@ -151,7 +151,7 @@ static int fill_arg(char *const dest, const char *argv)
     char *p = NULL;
 
     for (; *argv; argv++) {
-        if (isalnum(*argv) || *argv == '_') {
+        if (isalnum((unsigned char)*argv) || *argv == '_') {
             if (p)
                 *p++ = *argv;
             else
