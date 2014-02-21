@@ -13,6 +13,7 @@
 #define MAX_ENVCOUNT 30
 #define MAX_ENVNAME 15
 #define MAX_ENVVALUE 127
+#define PROMPT USER_NAME "@" USER_NAME "-STM32:~$ "
 
 /* Command handlers. */
 void export_envvar(int argc, char *argv[]);
@@ -363,8 +364,6 @@ void show_history(int argc, char *argv[])
 void shell_task()
 {
     char put_ch[2]={'0','\0'};
-    char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
-    int hint_length = sizeof(hint);
     char *p = NULL;
 
     fdout = mq_open("/tmp/mqueue/out", 0);
@@ -372,7 +371,7 @@ void shell_task()
 
     for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
         p = cmd[cur_his];
-        printf("%s", hint);
+        printf(PROMPT);
 
         while (1) {
             read(fdin, put_ch, 1);
