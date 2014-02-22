@@ -125,17 +125,12 @@ void printf(const char *fmt_str, ...)
 }
 
 #ifndef USE_ASM_OPTI_FUNC
-int strcmp(const char *str_a, const char *str_b)
+int strcmp(const char *s1, const char *s2)
 {
-    int i = 0;
-
-    while(str_a[i]) {
-        if (str_a[i] != str_b[i]) {
-            return str_a[i] - str_b[i];
-        }
-        i++;
+    while (*s1 && *s1 == *s2) {
+          s1++, s2++;
     }
-    return str_a[i] - str_b[i];
+    return (*s1 - *s2);
 }
 
 size_t strlen(const char *string)
