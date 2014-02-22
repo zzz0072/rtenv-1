@@ -60,8 +60,6 @@ extern struct task_control_block tasks[TASK_LIMIT];
 
 static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int cur_his=0;
-static int fdout;
-static int fdin;
 static int env_count = 0;
 
 static const hcmd_entry cmd_data[CMD_COUNT] = {
@@ -365,6 +363,9 @@ void shell_task()
 {
     char put_ch[2]={'0','\0'};
     char *p = NULL;
+    int fdout;
+    int fdin;
+
 
     fdout = mq_open("/tmp/mqueue/out", 0);
     fdin = open("/dev/tty0/in", 0);
