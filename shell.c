@@ -306,21 +306,6 @@ static void read_line(char *string, int max_token_chars)
 /************************
  * Command handlers
 *************************/
-void echo()
-{
-    int fdout;
-    int fdin;
-    char c;
-
-    fdout = open("/dev/tty0/out", 0);
-    fdin = open("/dev/tty0/in", 0);
-
-    while (1) {
-        read(fdin, &c, 1);
-        write(fdout, &c, 1);
-    }
-}
-
 /* export */
 void export_envvar(int argc, char *argv[])
 {
