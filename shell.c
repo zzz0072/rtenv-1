@@ -58,7 +58,7 @@ typedef struct {
 extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
-static char cmd[HISTORY_COUNT][CMDBUF_SIZE];
+static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int cur_his=0;
 static int fdout;
 static int fdin;
@@ -81,7 +81,7 @@ static evar_entry env_var[MAX_ENVCOUNT];
 static void find_events()
 {
     char buf[CMDBUF_SIZE];
-    char *p = cmd[cur_his];
+    char *p = g_cmd_hist[cur_his];
     char *q;
     int i;
 
@@ -91,9 +91,9 @@ static void find_events()
             while (*q && !isspace((unsigned char)*q))
                 q++;
             for (i = cur_his + HISTORY_COUNT - 1; i > cur_his; i--) {
-                if (!strncmp(cmd[i % HISTORY_COUNT], p + 1, q - p - 1)) {
+                if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                     strcpy(buf, q);
-                    strcpy(p, cmd[i % HISTORY_COUNT]);
+                    strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
                     p += strlen(p);
                     strcpy(p--, buf);
                     break;
@@ -197,7 +197,7 @@ static void check_keyword()
     int i;
 
     find_events();
-    strcpy(cmdstr, cmd[cur_his]);
+    strcpy(cmdstr, g_cmd_hist[cur_his]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
         return;
@@ -352,8 +352,8 @@ void show_history(int argc, char *argv[])
     int i;
 
     for (i = cur_his + 1; i <= cur_his + HISTORY_COUNT; i++) {
-        if (cmd[i % HISTORY_COUNT][0]) {
-            printf("%s\n\r", cmd[i % HISTORY_COUNT]);
+        if (g_cmd_hist[i % HISTORY_COUNT][0]) {
+            printf("%s\n\r", g_cmd_hist[i % HISTORY_COUNT]);
         }
     }
 }
@@ -370,7 +370,7 @@ void shell_task()
     fdin = open("/dev/tty0/in", 0);
 
     for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
-        p = cmd[cur_his];
+        p = g_cmd_hist[cur_his];
         printf(PROMPT);
 
         while (1) {
@@ -382,12 +382,12 @@ void shell_task()
                 break;
             }
             else if (put_ch[0] == 127 || put_ch[0] == '\b') {
-                if (p > cmd[cur_his]) {
+                if (p > g_cmd_hist[cur_his]) {
                     p--;
                     printf("\b \b");
                 }
             }
-            else if (p - cmd[cur_his] < CMDBUF_SIZE - 1) {
+            else if (p - g_cmd_hist[cur_his] < CMDBUF_SIZE - 1) {
                 *p++ = put_ch[0];
                 printf("%s", put_ch);
             }
