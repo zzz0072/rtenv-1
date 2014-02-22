@@ -59,7 +59,7 @@ extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
 static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
-static int cur_his=0;
+static int g_cur_cmd_hist_pos=0;
 static int g_env_count = 0;
 
 static const hcmd_entry cmd_data[CMD_COUNT] = {
@@ -79,7 +79,7 @@ static evar_entry env_var[MAX_ENVCOUNT];
 static void find_events()
 {
     char buf[CMDBUF_SIZE];
-    char *p = g_cmd_hist[cur_his];
+    char *p = g_cmd_hist[g_cur_cmd_hist_pos];
     char *q;
     int i;
 
@@ -88,7 +88,7 @@ static void find_events()
             q = p;
             while (*q && !isspace((unsigned char)*q))
                 q++;
-            for (i = cur_his + HISTORY_COUNT - 1; i > cur_his; i--) {
+            for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
                 if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                     strcpy(buf, q);
                     strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
@@ -195,7 +195,7 @@ static void check_keyword()
     int i;
 
     find_events();
-    strcpy(cmdstr, g_cmd_hist[cur_his]);
+    strcpy(cmdstr, g_cmd_hist[g_cur_cmd_hist_pos]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
         return;
@@ -349,7 +349,7 @@ void show_history(int argc, char *argv[])
 {
     int i;
 
-    for (i = cur_his + 1; i <= cur_his + HISTORY_COUNT; i++) {
+    for (i = g_cur_cmd_hist_pos + 1; i <= g_cur_cmd_hist_pos + HISTORY_COUNT; i++) {
         if (g_cmd_hist[i % HISTORY_COUNT][0]) {
             printf("%s\n\r", g_cmd_hist[i % HISTORY_COUNT]);
         }
@@ -370,8 +370,8 @@ void shell_task()
     fdout = mq_open("/tmp/mqueue/out", 0);
     fdin = open("/dev/tty0/in", 0);
 
-    for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
-        p = g_cmd_hist[cur_his];
+    for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
+        p = g_cmd_hist[g_cur_cmd_hist_pos];
         printf(PROMPT);
 
         while (1) {
@@ -383,12 +383,12 @@ void shell_task()
                 break;
             }
             else if (put_ch[0] == 127 || put_ch[0] == '\b') {
-                if (p > g_cmd_hist[cur_his]) {
+                if (p > g_cmd_hist[g_cur_cmd_hist_pos]) {
                     p--;
                     printf("\b \b");
                 }
             }
-            else if (p - g_cmd_hist[cur_his] < CMDBUF_SIZE - 1) {
+            else if (p - g_cmd_hist[g_cur_cmd_hist_pos] < CMDBUF_SIZE - 1) {
                 *p++ = put_ch[0];
                 printf("%s", put_ch);
             }
