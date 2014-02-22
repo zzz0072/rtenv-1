@@ -135,7 +135,7 @@ int strcmp(const char *str_a, const char *str_b)
         }
         i++;
     }
-    return 0;
+    return str_a[i] - str_b[i];
 }
 
 size_t strlen(const char *string)
