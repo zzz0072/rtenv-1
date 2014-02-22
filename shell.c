@@ -60,7 +60,7 @@ extern struct task_control_block tasks[TASK_LIMIT];
 
 static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int cur_his=0;
-static int env_count = 0;
+static int g_env_count = 0;
 
 static const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
@@ -134,7 +134,7 @@ static char *find_envvar(const char *name)
 {
     int i;
 
-    for (i = 0; i < env_count; i++) {
+    for (i = 0; i < g_env_count; i++) {
         if (!strcmp(env_var[i].name, name))
             return env_var[i].value;
     }
@@ -260,10 +260,10 @@ void export_envvar(int argc, char *argv[])
         found = find_envvar(argv[i]);
         if (found)
             strcpy(found, value);
-        else if (env_count < MAX_ENVCOUNT) {
-            strcpy(env_var[env_count].name, argv[i]);
-            strcpy(env_var[env_count].value, value);
-            env_count++;
+        else if (g_env_count < MAX_ENVCOUNT) {
+            strcpy(env_var[g_env_count].name, argv[i]);
+            strcpy(env_var[g_env_count].value, value);
+            g_env_count++;
         }
     }
 }
