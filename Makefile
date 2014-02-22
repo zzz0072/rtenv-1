@@ -66,10 +66,8 @@ CFLAGS += -fno-common -ffreestanding -O0
 ifeq ($(USE_ASM_OPTI_FUNC),YES)
 	SRCS+=memcpy.s
 
-	CFLAGS=-DUSE_ASM_OPTI_FUNC
+	CFLAGS+=-DUSE_ASM_OPTI_FUNC
 endif
-
-
 
 # Include PATH
 LIBDIR = .
