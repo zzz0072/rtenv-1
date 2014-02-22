@@ -235,15 +235,20 @@ static void check_keyword()
 }
 
 
-static void read_line(char *string, int max_token_chars)
+static char *readline(char *prompt)
 {
     int fdin;
     char ch[] = {0x00, 0x00};
     char last_char_is_ESC = RT_NO;
     int curr_char;
 
+    /* FIXME: reentrant problem? */
+    static char s_read_buf[CMDBUF_SIZE] = {0}; /* No malloc */
+
     fdin = open("/dev/tty0/in", 0);
     curr_char = 0;
+
+    printf("%s", prompt);
     while(1) {
         /* Receive a byte from the RS232 port (this call will
          * block). */
@@ -273,10 +278,10 @@ static void read_line(char *string, int max_token_chars)
         /* If the byte is an end-of-line type character, then
          * finish the string and inidcate we are done.
          */
-        if (curr_char == (max_token_chars - 2) || \
+        if (curr_char == (CMDBUF_SIZE - 2) || \
             (ch[0] == '\r') || (ch[0] == '\n')) {
-            *(string + curr_char) = '\n';
-            *(string + curr_char + 1) = '\0';
+            *(s_read_buf + curr_char) = '\n';
+            *(s_read_buf + curr_char + 1) = '\0';
             break;
         }
         else if(ch[0] == ESC) {
@@ -295,13 +300,15 @@ static void read_line(char *string, int max_token_chars)
         else {
             /* Appends only when buffer is not full.
              * Include \n\0 */
-            if (curr_char < (max_token_chars - 3)) {
-                *(string + curr_char++) = ch[0];
+            if (curr_char < (CMDBUF_SIZE - 3)) {
+                *(s_read_buf + curr_char++) = ch[0];
                 puts(ch);
             }
         }
     }
     printf("\n\r");
+
+    return s_read_buf;
 }
 
 
@@ -425,11 +432,15 @@ void show_history(int argc, char *argv[])
 ***************************/
 void shell_task()
 {
-    char put_ch[2]={'0','\0'};
+    char *read_str = 0;
 
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
-        printf(PROMPT);
-        read_line(g_cmd_hist[g_cur_cmd_hist_pos], CMDBUF_SIZE);
+        read_str = readline(PROMPT);
+        if (!read_str) {
+            continue;
+        }
+
+        strncpy(g_cmd_hist[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
         check_keyword();
     }
 }
