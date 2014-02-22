@@ -8,14 +8,13 @@ extern int mq_open(const char *name, int oflag);
 /* Hand made tools */
 int strncmp(const char *str_a, const char *str_b, size_t n)
 {
-    int i = 0;
-
-    for(i = 0; i < n; i++) {
-        if (str_a[i] != str_b[i]) {
-            return str_a[i] - str_b[i];
-        }
+    /* Find not matched char or reach n */
+    while(*str_a == *str_b && *str_a && n > 1) {
+        printf("str_a=%c, str_b:%c, n:%d\n\r", *str_a, *str_b, n);
+        str_a++; str_b++; n--;
     }
-    return 0;
+
+    return (int) ((unsigned char*)*str_a - (unsigned char*)*str_b);
 }
 
 char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_type)
