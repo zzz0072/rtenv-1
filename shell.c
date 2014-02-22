@@ -16,6 +16,12 @@
 #define MAX_ENVVALUE 127
 #define PROMPT USER_NAME "@" USER_NAME "-STM32:~$ "
 
+#define BACKSPACE (127)
+#define ESC        (27)
+#define SPACE      (32)
+
+#define RT_NO  (0)
+#define RT_YES (1)
 /* Command handlers. */
 void export_envvar(int argc, char *argv[]);
 void show_echo(int argc, char *argv[]);
@@ -226,6 +232,77 @@ static void check_keyword()
     }
 }
 
+
+static void read_line(char *string, int max_token_chars)
+{
+    int fdin;
+    char ch[] = {0x00, 0x00};
+    char last_char_is_ESC = RT_NO;
+    int curr_char;
+
+    fdin = open("/dev/tty0/in", 0);
+    curr_char = 0;
+    while(1) {
+        /* Receive a byte from the RS232 port (this call will
+         * block). */
+        read(fdin, &ch[0], 1);
+
+        /* Handle ESC case first */
+        if (last_char_is_ESC == RT_YES) {
+            last_char_is_ESC = RT_NO;
+
+            if (ch[0] == '[') {
+                /* Direction key: ESC[A ~ ESC[D */
+                read(fdin, &ch[0], 1);
+
+                /* Home:      ESC[1~
+                 * End:       ESC[2~
+                 * Insert:    ESC[3~
+                 * Delete:    ESC[4~
+                 * Page up:   ESC[5~
+                 * Page down: ESC[6~ */
+                if (ch[0] >= '1' && ch[0] <= '6') {
+                    read(fdin, &ch[0], 1);
+                }
+                continue;
+            }
+        }
+
+        /* If the byte is an end-of-line type character, then
+         * finish the string and inidcate we are done.
+         */
+        if (curr_char == (max_token_chars - 2) || \
+            (ch[0] == '\r') || (ch[0] == '\n')) {
+            *(string + curr_char) = '\n';
+            *(string + curr_char + 1) = '\0';
+            break;
+        }
+        else if(ch[0] == ESC) {
+            last_char_is_ESC = RT_YES;
+        }
+        /* Skip control characters. man ascii for more information */
+        else if (ch[0] < 0x20) {
+            continue;
+        }
+        else if(ch[0] == BACKSPACE) { /* backspace */
+            if(curr_char > 0) {
+                curr_char--;
+                printf("\b \b");
+            }
+        }
+        else {
+            /* Appends only when buffer is not full.
+             * Include \n\0 */
+            if (curr_char < (max_token_chars - 3)) {
+                *(string + curr_char++) = ch[0];
+                puts(ch);
+            }
+        }
+    }
+    printf("\n\r");
+}
+
+
 /************************
  * Command handlers
 *************************/
@@ -362,37 +439,10 @@ void show_history(int argc, char *argv[])
 void shell_task()
 {
     char put_ch[2]={'0','\0'};
-    char *p = NULL;
-    int fdout;
-    int fdin;
-
-
-    fdout = mq_open("/tmp/mqueue/out", 0);
-    fdin = open("/dev/tty0/in", 0);
 
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
-        p = g_cmd_hist[g_cur_cmd_hist_pos];
         printf(PROMPT);
-
-        while (1) {
-            read(fdin, put_ch, 1);
-
-            if (put_ch[0] == '\r' || put_ch[0] == '\n') {
-                *p = '\0';
-                printf("\n\r");
-                break;
-            }
-            else if (put_ch[0] == 127 || put_ch[0] == '\b') {
-                if (p > g_cmd_hist[g_cur_cmd_hist_pos]) {
-                    p--;
-                    printf("\b \b");
-                }
-            }
-            else if (p - g_cmd_hist[g_cur_cmd_hist_pos] < CMDBUF_SIZE - 1) {
-                *p++ = put_ch[0];
-                printf("%s", put_ch);
-            }
-        }
+        read_line(g_cmd_hist[g_cur_cmd_hist_pos], CMDBUF_SIZE);
         check_keyword();
     }
 }
