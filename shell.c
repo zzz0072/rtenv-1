@@ -90,18 +90,20 @@ static void find_events()
     int i;
 
     for (; *p; p++) {
-        if (*p == '!') {
-            q = p;
-            while (*q && !isspace((unsigned char)*q))
-                q++;
-            for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
-                if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
-                    strcpy(buf, q);
-                    strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
-                    p += strlen(p);
-                    strcpy(p--, buf);
-                    break;
-                }
+        if (*p != '!') {
+            continue;
+        }
+
+        q = p;
+        while (*q && !isspace((unsigned char)*q))
+            q++;
+        for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
+            if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
+                strcpy(buf, q);
+                strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
+                p += strlen(p);
+                strcpy(p--, buf);
+                break;
             }
         }
     }
@@ -333,7 +335,7 @@ void export_envvar(int argc, char *argv[])
 /* ps */
 void show_task_info(int argc, char* argv[])
 {
-    char ps_message[]="PID\tSTATUS\tPRIORITY";
+    char ps_message[] = "PID\tSTATUS\tPRIORITY";
     char *str_to_output = 0;
     int task_i;
 
