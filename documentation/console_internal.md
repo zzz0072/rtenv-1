@@ -37,4 +37,4 @@ To read or write characters in rtenv, the following tasks are involved.
     2. shell reads key from `/tty0/in`
 
 
-# Reference: path_server.md
+# Reference: path_server_internals.md
