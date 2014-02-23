@@ -30,7 +30,7 @@ STM32_SRCS = \
 # rtenv sources
 RTENV_SRCS = \
 		context_switch.s \
-		syscall.s \
+		syscall.c \
 		stm32_p103.c \
 		rt_string.c \
 		task.c   \
@@ -61,7 +61,7 @@ HEADERS = \
 
 # Basic configurations
 CFLAGS += -g3
-CFLAGS += -Wall
+CFLAGS += -Wall -std=c99
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
 
