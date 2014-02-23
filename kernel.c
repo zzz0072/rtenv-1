@@ -10,6 +10,7 @@
 #include "path_server.h"
 #include "serial.h"
 #include "shell.h"
+#include "proc.h"
 
 /*Global Variables*/
 size_t task_count = 0;
@@ -23,6 +24,9 @@ void first()
     if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
     if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
     if (!fork()) rs232_xmit_msg_task();
+    if (!fork()) setpriority(0, 0), proc_task();
+    if (!fork()) test_task();
+
     if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), shell_task();
 
     setpriority(0, PRIORITY_LIMIT);
@@ -55,8 +59,10 @@ int main()
     task_count++;
 
     /* Initialize all pipes */
-    for (i = 0; i < PIPE_LIMIT; i++)
+    for (i = 0; i < PIPE_LIMIT; i++)  {
         pipes[i].start = pipes[i].end = 0;
+        pipes[i].req_st = 0;
+    }
 
     /* Initialize fifos */
     for (i = 0; i <= PATHSERVER_FD; i++)
@@ -153,6 +159,14 @@ int main()
                 tasks[current_task].stack->r0 += tick_count;
                 tasks[current_task].status = TASK_WAIT_TIME;
             }
+            break;
+        case SYS_CALL_FD_STATUS: /* get fd status */
+            if (tasks[current_task].stack->r0 < PIPE_LIMIT)
+                tasks[current_task].stack->r0 =
+                    pipes[tasks[current_task].stack->r0].req_st;
+            else
+                tasks[current_task].stack->r0 = -1;
+
             break;
         default: /* Catch all interrupts */
             if ((int)tasks[current_task].stack->r7 < 0) {

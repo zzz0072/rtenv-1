@@ -37,6 +37,7 @@ RTENV_SRCS = \
 		serial.c \
 		path_server.c \
 		shell.c  \
+		proc.c   \
 		kernel.c
 
 SRCS= \
@@ -54,6 +55,7 @@ HEADERS = \
 		path_server.h    \
 		serial.h         \
 		shell.h          \
+		proc.h           \
 		syscall_def.h    \
 		syscall.h
 

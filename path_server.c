@@ -138,11 +138,12 @@ void _read(struct task_control_block *task, struct task_control_block *tasks, si
     else {
         struct pipe_ringbuffer *pipe = &pipes[task->stack->r0];
 
+        pipe->req_st = pipe->req_st | REQ_RD;
         if (pipe->readable(pipe, task)) {
             size_t i;
 
             pipe->read(pipe, task);
-
+            pipe->req_st = pipe->req_st & !REQ_RD;
             /* Unblock any waiting writes */
             for (i = 0; i < task_count; i++)
                 if (tasks[i].status == TASK_WAIT_WRITE)
@@ -161,11 +162,13 @@ void _write(struct task_control_block *task, struct task_control_block *tasks, s
     else {
         struct pipe_ringbuffer *pipe = &pipes[task->stack->r0];
 
+        pipe->req_st = pipe->req_st | REQ_WR;
         if (pipe->writable(pipe, task)) {
             size_t i;
 
             pipe->write(pipe, task);
 
+            pipe->req_st = pipe->req_st & !REQ_WR;
             /* Unblock any waiting reads */
             for (i = 0; i < task_count; i++)
                 if (tasks[i].status == TASK_WAIT_READ)

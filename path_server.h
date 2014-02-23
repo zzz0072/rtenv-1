@@ -15,9 +15,13 @@
 
 #define O_CREAT 4
 
+#define REQ_RD (1)
+#define REQ_WR (2)
+
 struct pipe_ringbuffer {
     int start;
     int end;
+    int req_st;
     char data[PIPE_BUF];
 
     int (*readable) (struct pipe_ringbuffer*, struct task_control_block*);

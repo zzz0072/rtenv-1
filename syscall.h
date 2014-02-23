@@ -19,4 +19,6 @@ int setpriority(int who, int value);
 int mknod(int fd, int mode, int dev);
 
 void sleep(unsigned int);
+
+int get_fd_status(int fd);
 #endif /* SYSCALL_H_20130919 */

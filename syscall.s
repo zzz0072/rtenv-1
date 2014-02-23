@@ -75,3 +75,15 @@ sleep:
     nop
     pop {r7}
     bx lr
+
+
+.global get_fd_status
+get_fd_status:
+    push {r7}
+    mov r7, #0xA
+    svc 0
+    nop
+    pop {r7}
+    bx lr
+
+
