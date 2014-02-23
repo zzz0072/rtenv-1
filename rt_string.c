@@ -13,7 +13,7 @@ int strncmp(const char *str_a, const char *str_b, size_t n)
         str_a++; str_b++; n--;
     }
 
-    return (int) ((unsigned char*)*str_a - (unsigned char*)*str_b);
+    return (int) (*str_a - *str_b);
 }
 
 char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_type)
