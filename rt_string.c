@@ -10,7 +10,6 @@ int strncmp(const char *str_a, const char *str_b, size_t n)
 {
     /* Find not matched char or reach n */
     while(*str_a == *str_b && *str_a && n > 1) {
-        printf("str_a=%c, str_b:%c, n:%d\n\r", *str_a, *str_b, n);
         str_a++; str_b++; n--;
     }
 
