@@ -33,11 +33,9 @@ void first()
 int main()
 {
     unsigned int stacks[TASK_LIMIT][STACK_SIZE];
-    //struct task_control_block tasks[TASK_LIMIT];
     struct pipe_ringbuffer pipes[PIPE_LIMIT];
     struct task_control_block *ready_list[PRIORITY_LIMIT + 1];  /* [0 ... 39] */
     struct task_control_block *wait_list = NULL;
-    //size_t task_count = 0;
     size_t current_task = 0;
     size_t i;
     struct task_control_block *task;
