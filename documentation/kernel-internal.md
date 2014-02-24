@@ -13,10 +13,10 @@ Kernel is the core of rtenv OS. It does:
 * Bring up tasks
 
 # System call
-System calls provides services interface from kernel to user tasks. It's interface implementation is in syscall.s. It merely calls svc (See: Supervisor Calls) to switch from thread mode to handler mode (See: Operating modes). The difference between implementations are system call number.
+System calls provides services interface from kernel to user tasks. It's interface implementation is in syscall.s. It merely calls svc (See: `Supervisor Calls`) to switch from thread mode to handler mode (See: `Operating modes`). The difference between implementations are system call number.
 
 * Flow
-    * User task calls a system call in thread mode. Functions parameters and return value storage is unified. See: `Procedure Call Standard for the ARM Architecture`.
+    * User task calls a system call in thread mode. Functions parameters and return value storage is unified (See: `Procedure Call Standard for the ARM Architecture`).
     * syscall.s pass system call number in r7 and switch to handler mode.
     * kernel resumed right after activate() and run related system call according to system call number in r7.
     * kernel saves result and put task information into wait queue.
@@ -35,6 +35,6 @@ Here is the sequence of main loop:
 
 # References:
 * path_server_internals.md
-* [Operating modes](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0337e/ch02s01s01.html)
-* [Procedure Call Standard for the ARM Architecture](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/index.html)
-* [Supervisor Calls](http://infocenter.arm.com/help/topic/com.arm.doc.dai0179b/ar01s02s07.html)
+* [`Operating modes`](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0337e/ch02s01s01.html)
+* [`Procedure Call Standard for the ARM Architecture`](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/index.html)
+* [`Supervisor Calls`](http://infocenter.arm.com/help/topic/com.arm.doc.dai0179b/ar01s02s07.html)
