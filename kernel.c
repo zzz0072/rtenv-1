@@ -10,6 +10,7 @@
 #include "path_server.h"
 #include "serial.h"
 #include "shell.h"
+#include "malloc.h"
 
 /*Global Variables*/
 size_t task_count = 0;
@@ -63,6 +64,9 @@ int main()
     /* Initialize ready lists */
     for (i = 0; i <= PRIORITY_LIMIT; i++)
         ready_list[i] = NULL;
+
+    /* Init memory pool for dynamic memory allocation */
+    init_mpool();
 
     while (1) {
         tasks[current_task].stack = activate(tasks[current_task].stack);

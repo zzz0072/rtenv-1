@@ -4,6 +4,7 @@
 #include "path_server.h"
 #include "rt_string.h"
 #include "syscall.h"
+#include "malloc.h"
 
 /* Internal defines */
 #define MAX_CMDNAME 19
@@ -241,9 +242,11 @@ static char *readline(char *prompt)
     char ch[] = {0x00, 0x00};
     char last_char_is_ESC = RT_NO;
     int curr_char;
+    char *read_buf = (char *)malloc(CMDBUF_SIZE);
 
-    /* FIXME: reentrant problem? */
-    static char s_read_buf[CMDBUF_SIZE] = {0}; /* No malloc */
+    if (read_buf == 0) {
+        return 0;
+    }
 
     fdin = open("/dev/tty0/in", 0);
     curr_char = 0;
@@ -280,8 +283,8 @@ static char *readline(char *prompt)
          */
         if (curr_char == (CMDBUF_SIZE - 2) || \
             (ch[0] == '\r') || (ch[0] == '\n')) {
-            *(s_read_buf + curr_char) = '\n';
-            *(s_read_buf + curr_char + 1) = '\0';
+            *(read_buf + curr_char) = '\n';
+            *(read_buf + curr_char + 1) = '\0';
             break;
         }
         else if(ch[0] == ESC) {
@@ -301,14 +304,14 @@ static char *readline(char *prompt)
             /* Appends only when buffer is not full.
              * Include \n\0 */
             if (curr_char < (CMDBUF_SIZE - 3)) {
-                *(s_read_buf + curr_char++) = ch[0];
+                *(read_buf + curr_char++) = ch[0];
                 puts(ch);
             }
         }
     }
     printf("\n\r");
 
-    return s_read_buf;
+    return read_buf;
 }
 
 
@@ -442,6 +445,8 @@ void shell_task()
 
         strncpy(g_cmd_hist[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
         check_keyword();
+        free(read_str);
+        read_str = 0;
     }
 }
 
