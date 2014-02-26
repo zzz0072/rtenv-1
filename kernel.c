@@ -11,6 +11,7 @@
 #include "serial.h"
 #include "shell.h"
 #include "proc.h"
+#include "malloc.h"
 
 /*Global Variables*/
 size_t task_count = 0;
@@ -37,11 +38,9 @@ void first()
 int main()
 {
     unsigned int stacks[TASK_LIMIT][STACK_SIZE];
-    //struct task_control_block tasks[TASK_LIMIT];
     struct pipe_ringbuffer pipes[PIPE_LIMIT];
     struct task_control_block *ready_list[PRIORITY_LIMIT + 1];  /* [0 ... 39] */
     struct task_control_block *wait_list = NULL;
-    //size_t task_count = 0;
     size_t current_task = 0;
     size_t i;
     struct task_control_block *task;
@@ -71,6 +70,9 @@ int main()
     /* Initialize ready lists */
     for (i = 0; i <= PRIORITY_LIMIT; i++)
         ready_list[i] = NULL;
+
+    /* Init memory pool for dynamic memory allocation */
+    init_mpool();
 
     while (1) {
         tasks[current_task].stack = activate(tasks[current_task].stack);
@@ -170,7 +172,7 @@ int main()
             break;
         default: /* Catch all interrupts */
             if ((int)tasks[current_task].stack->r7 < 0) {
-                unsigned int intr = -tasks[current_task].stack->r7 - 16;
+                int intr = -tasks[current_task].stack->r7 - 16;
 
                 if (intr == SysTick_IRQn) {
                     /* Never disable timer. We need it for pre-emption */

@@ -4,6 +4,7 @@
 #include "path_server.h"
 #include "rt_string.h"
 #include "syscall.h"
+#include "malloc.h"
 
 /* Internal defines */
 #define MAX_CMDNAME 19
@@ -23,7 +24,7 @@
 #define RT_NO  (0)
 #define RT_YES (1)
 /* Command handlers. */
-void export_envvar(int argc, char *argv[]);
+void export_env_var(int argc, char *argv[]);
 void show_echo(int argc, char *argv[]);
 void show_cmd_info(int argc, char *argv[]);
 void show_task_info(int argc, char *argv[]);
@@ -66,11 +67,11 @@ extern struct task_control_block tasks[TASK_LIMIT];
 
 static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
-static int g_env_count = 0;
+static int g_env_var_count = 0;
 
 static const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
-    [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
+    [CMD_EXPORT] = {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
     [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
     [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
     [CMD_MAN] = {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
@@ -82,28 +83,31 @@ static evar_entry env_var[MAX_ENVCOUNT];
 /************************
  * Internal functions
 *************************/
-static void find_events()
+static void hist_expand()
 {
     char buf[CMDBUF_SIZE];
     char *p = g_cmd_hist[g_cur_cmd_hist_pos];
     char *q;
     int i;
 
+    /* ex: 'help' in g_cmd_hist[] can be run in !h, !he, !hel at command line */
     for (; *p; p++) {
         if (*p != '!') {
             continue;
         }
 
         q = p;
-        while (*q && !isspace((unsigned char)*q))
+        while (*q && !isspace((unsigned char)*q)) {
             q++;
+        }
+
         for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
             if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                 strcpy(buf, q);
                 strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
                 p += strlen(p);
                 strcpy(p--, buf);
-                break;
+                return;
             }
         }
     }
@@ -138,11 +142,11 @@ static char *cmdtok(char *cmd)
     return cur;
 }
 
-static char *find_envvar(const char *name)
+static char *get_env_var_val(const char *name)
 {
     int i;
 
-    for (i = 0; i < g_env_count; i++) {
+    for (i = 0; i < g_env_var_count; i++) {
         if (!strcmp(env_var[i].name, name))
             return env_var[i].value;
     }
@@ -151,9 +155,9 @@ static char *find_envvar(const char *name)
 }
 
 /* Fill in entire value of argument. */
-static int fill_arg(char *const dest, const char *argv)
+static int env_var_expand(char *const dest, const char *argv)
 {
-    char env_name[MAX_ENVNAME + 1];
+    char env_var_name[MAX_ENVNAME + 1];
     char *buf = dest;
     char *p = NULL;
 
@@ -167,7 +171,7 @@ static int fill_arg(char *const dest, const char *argv)
         else { /* Symbols. */
             if (p) {
                 *p = '\0';
-                p = find_envvar(env_name);
+                p = get_env_var_val(env_var_name);
                 if (p) {
                     strcpy(buf, p);
                     buf += strlen(p);
@@ -175,14 +179,14 @@ static int fill_arg(char *const dest, const char *argv)
                 }
             }
             if (*argv == '$')
-                p = env_name;
+                p = env_var_name;
             else
                 *buf++ = *argv;
         }
     }
     if (p) {
         *p = '\0';
-        p = find_envvar(env_name);
+        p = get_env_var_val(env_var_name);
         if (p) {
             strcpy(buf, p);
             buf += strlen(p);
@@ -193,7 +197,7 @@ static int fill_arg(char *const dest, const char *argv)
     return buf - dest;
 }
 
-static void check_keyword()
+static void run_cmd()
 {
     char *argv[MAX_ARGC + 1] = {NULL};
     char cmdstr[CMDBUF_SIZE];
@@ -202,7 +206,7 @@ static void check_keyword()
     int argc = 1;
     int i;
 
-    find_events();
+    hist_expand();
     strcpy(cmdstr, g_cmd_hist[g_cur_cmd_hist_pos]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
@@ -218,7 +222,7 @@ static void check_keyword()
     }
 
     for(i = 0; i < argc; i++) {
-        int l = fill_arg(p, argv[i]);
+        int l = env_var_expand(p, argv[i]);
         argv[i] = p;
         p += l + 1;
     }
@@ -241,9 +245,11 @@ static char *readline(char *prompt)
     char ch[] = {0x00, 0x00};
     char last_char_is_ESC = RT_NO;
     int curr_char;
+    char *read_buf = (char *)malloc(CMDBUF_SIZE);
 
-    /* FIXME: reentrant problem? */
-    static char s_read_buf[CMDBUF_SIZE] = {0}; /* No malloc */
+    if (read_buf == 0) {
+        return 0;
+    }
 
     fdin = open("/dev/tty0/in", 0);
     curr_char = 0;
@@ -280,8 +286,8 @@ static char *readline(char *prompt)
          */
         if (curr_char == (CMDBUF_SIZE - 2) || \
             (ch[0] == '\r') || (ch[0] == '\n')) {
-            *(s_read_buf + curr_char) = '\n';
-            *(s_read_buf + curr_char + 1) = '\0';
+            *(read_buf + curr_char) = '\n';
+            *(read_buf + curr_char + 1) = '\0';
             break;
         }
         else if(ch[0] == ESC) {
@@ -301,14 +307,14 @@ static char *readline(char *prompt)
             /* Appends only when buffer is not full.
              * Include \n\0 */
             if (curr_char < (CMDBUF_SIZE - 3)) {
-                *(s_read_buf + curr_char++) = ch[0];
+                *(read_buf + curr_char++) = ch[0];
                 puts(ch);
             }
         }
     }
     printf("\n\r");
 
-    return s_read_buf;
+    return read_buf;
 }
 
 
@@ -316,9 +322,9 @@ static char *readline(char *prompt)
  * Command handlers
 *************************/
 /* export */
-void export_envvar(int argc, char *argv[])
+void export_env_var(int argc, char *argv[])
 {
-    char *found;
+    char *env_var_val;
     char *value;
     int i;
 
@@ -328,13 +334,13 @@ void export_envvar(int argc, char *argv[])
             value++;
         if (*value)
             *value++ = '\0';
-        found = find_envvar(argv[i]);
-        if (found)
-            strcpy(found, value);
-        else if (g_env_count < MAX_ENVCOUNT) {
-            strcpy(env_var[g_env_count].name, argv[i]);
-            strcpy(env_var[g_env_count].value, value);
-            g_env_count++;
+        env_var_val = get_env_var_val(argv[i]);
+        if (env_var_val)
+            strcpy(env_var_val, value);
+        else if (g_env_var_count < MAX_ENVCOUNT) {
+            strcpy(env_var[g_env_var_count].name, argv[i]);
+            strcpy(env_var[g_env_var_count].value, value);
+            g_env_var_count++;
         }
     }
 }
@@ -441,7 +447,9 @@ void shell_task()
         }
 
         strncpy(g_cmd_hist[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
-        check_keyword();
+        run_cmd(); /* cmd string passed by g_cmd_hist */
+        free(read_str);
+        read_str = 0;
     }
 }
 
