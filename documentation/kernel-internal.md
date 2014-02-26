@@ -8,7 +8,7 @@ Kernel is the core of rtenv OS. It does:
     * ring buffer
     * task control block for ready tasks in different priorities
 * Task scheduler
-* System calls for task to use
+* System calls for tasks to use
 * Hardware initialization
 * Bring up tasks
 
@@ -17,7 +17,7 @@ System call provides services interface from kernel to user tasks. It's interfac
 
 * Flow
     * User task calls a system call in thread mode. Functions parameters and return value storage are followed by procedure call standard (See: `Procedure Call Standard for the ARM Architecture`).
-    * syscall.c pass system call number in r7 and switch to handler mode.
+    * syscall.c calls SVC (See: `Supervisor Calls`) and pass system call number in r7, pushes related register include return address in SVC_Handler (See: `ISR`) and switch to handler mode.
     * kernel resumed right after activate() and run related system call according to system call number in r7.
     * kernel saves result and put task information into wait queue.
     * Tasks resume eventually and gets the result.
@@ -27,17 +27,18 @@ Here is the sequence of main loop:
 
 * kernel switches to a user task.
     * Done by
-        * Write task stack to process stack pointer
-        * Set CONTROL register options
+        * Writes r0 (usually system result, See: `Procedure Call Standard for the ARM Architecture`) to process stack pointer
+        * Sets CONTROL register options
             * Use process stack pointer
-            * Use Unprivileged level
-* When a system call is invoked in the user task or an interrupt occurred, kernel resumes.
+            * Use unprivileged level
+        * CPU jumps to return address which stored at SVC_Handler (See: `ISR`) 
+* When a system call is invoked in a user task or an interrupt occurred, kernel resumes.
 * kernel runs system call or handle interrupt.
     * timer interrupt will run periodically to force context switch and implements sleep system call.
 * kernel pushes current task to read queue or waiting queue (only if sleep or wait interrupt).
-* kernel decides to run next user task by priority order from waiting queue or to run current task.
+* kernel decides to run next user task by priority order from waiting queue or decides to run current task.
 
-# Interrupt service routine (ISR)
+# Interrupt service routine (`ISR`)
 3 ISRs are implemented in rtenv. They are
 
 * SysTick_Handler
@@ -49,7 +50,7 @@ Their entry point is declared in `g_pfnVectors` in startup_stm32f10x_md.s. Each 
 The main difference of `SysTick_Handler USART2_IRQHandler` and `SVC_Handler` is that `SysTick_Handler USART2_IRQHandler` are interrupts while `SVC_Handler` is an exception. Thus, the handler of `SysTick_Handler USART2_IRQHandler` have to pass exception via r7 while while `SVC_Handler` does not 
 
 ## Interrupt number (See `Interrupt Program Status Register` and `Vector table`)
-`Interrupt Program Status Register` (IPSR)'s exception number are IRQ number are different. Thus, rtenv subtracts exception number with 16 to get the IRQ number. Here is the sequence.
+`Interrupt Program Status Register` (IPSR)'s exception number are IRQ number is different. Thus, rtenv subtracts exception number with 16 to get the IRQ number. Here is the sequence.
 
 * Interrupt occurs
 * CPU saves exception number to IPSR, look into vector table, and jump related handler or default handler.
