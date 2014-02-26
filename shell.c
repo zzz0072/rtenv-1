@@ -83,13 +83,14 @@ static evar_entry env_var[MAX_ENVCOUNT];
 /************************
  * Internal functions
 *************************/
-static void find_events()
+static void hist_expand()
 {
     char buf[CMDBUF_SIZE];
     char *p = g_cmd_hist[g_cur_cmd_hist_pos];
     char *q;
     int i;
 
+    /* ex: 'help' in g_cmd_hist[] can be run in !h, !he, !hel at command line */
     for (; *p; p++) {
         if (*p != '!') {
             continue;
@@ -205,7 +206,7 @@ static void run_cmd()
     int argc = 1;
     int i;
 
-    find_events();
+    hist_expand();
     strcpy(cmdstr, g_cmd_hist[g_cur_cmd_hist_pos]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
