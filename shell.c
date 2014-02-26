@@ -106,7 +106,7 @@ static void find_events()
                 strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
                 p += strlen(p);
                 strcpy(p--, buf);
-                break;
+                return;
             }
         }
     }
