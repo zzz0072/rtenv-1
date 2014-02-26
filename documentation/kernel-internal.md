@@ -17,21 +17,30 @@ System call provides services interface from kernel to user tasks. It's interfac
 
 * Flow
     * User task calls a system call in thread mode. Functions parameters and return value storage are followed by procedure call standard (See: `Procedure Call Standard for the ARM Architecture`).
-    * syscall.c calls SVC (See: `Supervisor Calls`) and pass system call number in r7, pushes related register include return address in SVC_Handler (See: `ISR`) and switch to handler mode.
-    * kernel resumed right after activate() and run related system call according to system call number in r7.
-    * kernel saves result and put task information into wait queue.
-    * Tasks resume eventually and gets the result.
+    * syscall.c calls SVC (See: `Supervisor Calls`) and pass system call number in r7, and switch to handler mode.
+        * Details:
+            * SVC triggers an exception, some registers are pushed into process stack automatically (See: `Exception entry`)
+            * CPU jumps to SVC_Handler
+            * SVC_Handler saves process stack pointer value to r0 as return value of activate()
+            * SVC_Handler pushes registers that need to return to user task into process stack
+            * SVC_Handler restores PSR and restores registers from main stack
+            * SVC_Handler jumps to next line of activate()
+    * kernel runs related system call according to system call number in process stack->r7.
+    * kernel saves result into task's process stack->r0
+    * kernel invoke activate() to run a user task
+        * Details
+            * activate() saves PSR and pushes registers that need to return to kernel into main stack
+            * Writes r0 (the process stack pointer value of selected task as a parameter) to process stack pointer
+            * Sets CONTROL register options
+                * Use process stack
+                * Use unprivileged level
+            * CPU jumps to return address which stored at SVC_Handler (See: `ISR`). This should be the next line of SVC in system call wrapper.
+
 
 # Scheduler
 Here is the sequence of main loop:
 
 * kernel switches to a user task.
-    * Done by
-        * Writes r0 (usually system result, See: `Procedure Call Standard for the ARM Architecture`) to process stack pointer
-        * Sets CONTROL register options
-            * Use process stack pointer
-            * Use unprivileged level
-        * CPU jumps to return address which stored at SVC_Handler (See: `ISR`) 
 * When a system call is invoked in a user task or an interrupt occurred, kernel resumes.
 * kernel runs system call or handle interrupt.
     * timer interrupt will run periodically to force context switch and implements sleep system call.
@@ -66,5 +75,6 @@ The main difference of `SysTick_Handler USART2_IRQHandler` and `SVC_Handler` is 
 * [`Operating modes`](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0337e/ch02s01s01.html)
 * [`Procedure Call Standard for the ARM Architecture`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ihi0042e/index.html)
 * [`Supervisor Calls`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0179b/ar01s02s07.html)
+* [`Exception entry`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/Babefdjc.html)
 * [`Interrupt Program Status Register`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/CHDBIBGJ.html)
 * [`Vector table`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/BABIFJFG.html)
