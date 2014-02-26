@@ -33,8 +33,33 @@ Here is the sequence of main loop:
 * kernel pushes current task to read queue or waiting queue (only if sleep or wait interrupt).
 * kernel decides to run next user task by priority order from waiting queue or to run current task.
 
+# Interrupt service routine (ISR)
+3 ISRs are implemented in rtenv. They are
+
+* SysTick_Handler
+* USART2_IRQHandler
+* SVC_Handler
+
+Their entry point is declared in `g_pfnVectors` in startup_stm32f10x_md.s. Each time an exception occurred, CPU looks into this table and decide where it will jump to (See #194 in startup_stm32f10x_md for further information of default handler and week alias.).
+
+The main difference of `SysTick_Handler USART2_IRQHandler` and `SVC_Handler` is that `SysTick_Handler USART2_IRQHandler` are interrupts while `SVC_Handler` is an exception. Thus, the handler of `SysTick_Handler USART2_IRQHandler` have to pass exception via r7 while while `SVC_Handler` does not 
+
+## Interrupt number (See `Interrupt Program Status Register` and `Vector table`)
+`Interrupt Program Status Register` (IPSR)'s exception number are IRQ number are different. Thus, rtenv subtracts exception number with 16 to get the IRQ number. Here is the sequence.
+
+* Interrupt occurs
+* CPU saves exception number to IPSR, look into vector table, and jump related handler or default handler.
+* rtenv registered ISR is called
+* rtenv registered ISR saves exception number to r7
+* rtenv registered ISR multiple r7 by -1 to let main loop identify the request is an exception or a interrupt
+* rtenv kernel resumed
+* rtenv kernel convert exception number to IRQ number and did related actions
+* rtenv kernel scheduler takes place
+
 # References:
 * path_server_internals.md
 * [`Operating modes`](http://infocenter.arm.com/help/topic/com.arm.doc.ddi0337e/ch02s01s01.html)
-* [`Procedure Call Standard for the ARM Architecture`](http://infocenter.arm.com/help/topic/com.arm.doc.ihi0042e/index.html)
-* [`Supervisor Calls`](http://infocenter.arm.com/help/topic/com.arm.doc.dai0179b/ar01s02s07.html)
+* [`Procedure Call Standard for the ARM Architecture`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.ihi0042e/index.html)
+* [`Supervisor Calls`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dai0179b/ar01s02s07.html)
+* [`Interrupt Program Status Register`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/CHDBIBGJ.html)
+* [`Vector table`](http://infocenter.arm.com/help/index.jsp?topic=/com.arm.doc.dui0552a/BABIFJFG.html)
