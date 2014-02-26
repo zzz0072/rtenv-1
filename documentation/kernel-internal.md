@@ -25,13 +25,13 @@ System calls provides services interface from kernel to user tasks. It's interfa
 # Scheduler
 Here is the sequence of main loop:
 
-* kernel picks a user task and switches to it by setting CONTROL register to thread mode.
+* kernel switches to a user task.
+    * Done by setting CONTROL register and process stack pointer register to switch from kernel mode to thread mode.
 * When a system call is invoked in the user task or an interrupt occurred, kernel resumes.
 * kernel runs system call or handle interrupt.
     * timer interrupt will run periodically to force context switch and implements sleep system call.
 * kernel pushes current task to read queue or waiting queue (only if sleep or wait interrupt).
 * kernel decides to run next user task by priority order from waiting queue or to run current task.
-
 
 # References:
 * path_server_internals.md
