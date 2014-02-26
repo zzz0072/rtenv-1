@@ -24,7 +24,7 @@
 #define RT_NO  (0)
 #define RT_YES (1)
 /* Command handlers. */
-void export_envvar(int argc, char *argv[]);
+void export_env_var(int argc, char *argv[]);
 void show_echo(int argc, char *argv[]);
 void show_cmd_info(int argc, char *argv[]);
 void show_task_info(int argc, char *argv[]);
@@ -67,11 +67,11 @@ extern struct task_control_block tasks[TASK_LIMIT];
 
 static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
-static int g_env_count = 0;
+static int g_env_var_count = 0;
 
 static const hcmd_entry cmd_data[CMD_COUNT] = {
     [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
-    [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
+    [CMD_EXPORT] = {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
     [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
     [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
     [CMD_MAN] = {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
@@ -142,11 +142,11 @@ static char *cmdtok(char *cmd)
     return cur;
 }
 
-static char *get_env_val(const char *name)
+static char *get_env_var_val(const char *name)
 {
     int i;
 
-    for (i = 0; i < g_env_count; i++) {
+    for (i = 0; i < g_env_var_count; i++) {
         if (!strcmp(env_var[i].name, name))
             return env_var[i].value;
     }
@@ -155,9 +155,9 @@ static char *get_env_val(const char *name)
 }
 
 /* Fill in entire value of argument. */
-static int fill_arg(char *const dest, const char *argv)
+static int env_var_expand(char *const dest, const char *argv)
 {
-    char env_name[MAX_ENVNAME + 1];
+    char env_var_name[MAX_ENVNAME + 1];
     char *buf = dest;
     char *p = NULL;
 
@@ -171,7 +171,7 @@ static int fill_arg(char *const dest, const char *argv)
         else { /* Symbols. */
             if (p) {
                 *p = '\0';
-                p = get_env_val(env_name);
+                p = get_env_var_val(env_var_name);
                 if (p) {
                     strcpy(buf, p);
                     buf += strlen(p);
@@ -179,14 +179,14 @@ static int fill_arg(char *const dest, const char *argv)
                 }
             }
             if (*argv == '$')
-                p = env_name;
+                p = env_var_name;
             else
                 *buf++ = *argv;
         }
     }
     if (p) {
         *p = '\0';
-        p = get_env_val(env_name);
+        p = get_env_var_val(env_var_name);
         if (p) {
             strcpy(buf, p);
             buf += strlen(p);
@@ -222,7 +222,7 @@ static void run_cmd()
     }
 
     for(i = 0; i < argc; i++) {
-        int l = fill_arg(p, argv[i]);
+        int l = env_var_expand(p, argv[i]);
         argv[i] = p;
         p += l + 1;
     }
@@ -322,9 +322,9 @@ static char *readline(char *prompt)
  * Command handlers
 *************************/
 /* export */
-void export_envvar(int argc, char *argv[])
+void export_env_var(int argc, char *argv[])
 {
-    char *env_val;
+    char *env_var_val;
     char *value;
     int i;
 
@@ -334,13 +334,13 @@ void export_envvar(int argc, char *argv[])
             value++;
         if (*value)
             *value++ = '\0';
-        env_val = get_env_val(argv[i]);
-        if (env_val)
-            strcpy(env_val, value);
-        else if (g_env_count < MAX_ENVCOUNT) {
-            strcpy(env_var[g_env_count].name, argv[i]);
-            strcpy(env_var[g_env_count].value, value);
-            g_env_count++;
+        env_var_val = get_env_var_val(argv[i]);
+        if (env_var_val)
+            strcpy(env_var_val, value);
+        else if (g_env_var_count < MAX_ENVCOUNT) {
+            strcpy(env_var[g_env_var_count].name, argv[i]);
+            strcpy(env_var[g_env_var_count].value, value);
+            g_env_var_count++;
         }
     }
 }
