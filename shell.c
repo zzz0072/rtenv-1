@@ -96,8 +96,10 @@ static void find_events()
         }
 
         q = p;
-        while (*q && !isspace((unsigned char)*q))
+        while (*q && !isspace((unsigned char)*q)) {
             q++;
+        }
+
         for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
             if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                 strcpy(buf, q);
@@ -139,7 +141,7 @@ static char *cmdtok(char *cmd)
     return cur;
 }
 
-static char *find_envvar(const char *name)
+static char *get_env_val(const char *name)
 {
     int i;
 
@@ -168,7 +170,7 @@ static int fill_arg(char *const dest, const char *argv)
         else { /* Symbols. */
             if (p) {
                 *p = '\0';
-                p = find_envvar(env_name);
+                p = get_env_val(env_name);
                 if (p) {
                     strcpy(buf, p);
                     buf += strlen(p);
@@ -183,7 +185,7 @@ static int fill_arg(char *const dest, const char *argv)
     }
     if (p) {
         *p = '\0';
-        p = find_envvar(env_name);
+        p = get_env_val(env_name);
         if (p) {
             strcpy(buf, p);
             buf += strlen(p);
@@ -194,7 +196,7 @@ static int fill_arg(char *const dest, const char *argv)
     return buf - dest;
 }
 
-static void check_keyword()
+static void run_cmd()
 {
     char *argv[MAX_ARGC + 1] = {NULL};
     char cmdstr[CMDBUF_SIZE];
@@ -321,7 +323,7 @@ static char *readline(char *prompt)
 /* export */
 void export_envvar(int argc, char *argv[])
 {
-    char *found;
+    char *env_val;
     char *value;
     int i;
 
@@ -331,9 +333,9 @@ void export_envvar(int argc, char *argv[])
             value++;
         if (*value)
             *value++ = '\0';
-        found = find_envvar(argv[i]);
-        if (found)
-            strcpy(found, value);
+        env_val = get_env_val(argv[i]);
+        if (env_val)
+            strcpy(env_val, value);
         else if (g_env_count < MAX_ENVCOUNT) {
             strcpy(env_var[g_env_count].name, argv[i]);
             strcpy(env_var[g_env_count].value, value);
@@ -444,7 +446,7 @@ void shell_task()
         }
 
         strncpy(g_cmd_hist[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
-        check_keyword();
+        run_cmd(); /* cmd string passed by g_cmd_hist */
         free(read_str);
         read_str = 0;
     }
