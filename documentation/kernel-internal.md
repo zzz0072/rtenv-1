@@ -40,7 +40,7 @@ Here is the sequence of main loop:
 * USART2_IRQHandler
 * SVC_Handler
 
-Their entry point is declared in `g_pfnVectors` in startup_stm32f10x_md.s. Each time an exception occurred, CPU looks into this table and decide where it will jump to (See #194 in startup_stm32f10x_md for further information of default handler and week alias.).
+Their entry point is declared in `g_pfnVectors` in startup_stm32f10x_md.s. Each time an exception occurred, CPU looks into this table and decide where it will jump to (See #194 in startup_stm32f10x_md for further information of default handler and weak alias.).
 
 The main difference of `SysTick_Handler USART2_IRQHandler` and `SVC_Handler` is that `SysTick_Handler USART2_IRQHandler` are interrupts while `SVC_Handler` is an exception. Thus, the handler of `SysTick_Handler USART2_IRQHandler` have to pass exception via r7 while while `SVC_Handler` does not 
 
