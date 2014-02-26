@@ -158,7 +158,7 @@ int main()
             break;
         default: /* Catch all interrupts */
             if ((int)tasks[current_task].stack->r7 < 0) {
-                unsigned int intr = -tasks[current_task].stack->r7 - 16;
+                int intr = -tasks[current_task].stack->r7 - 16;
 
                 if (intr == SysTick_IRQn) {
                     /* Never disable timer. We need it for pre-emption */
