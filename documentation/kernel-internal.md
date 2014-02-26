@@ -13,11 +13,11 @@ Kernel is the core of rtenv OS. It does:
 * Bring up tasks
 
 # System call
-System call provides services interface from kernel to user tasks. It's interface implementation is in syscall.s. It merely calls svc (See: `Supervisor Calls`) to switch from thread mode to handler mode (See: `Operating modes`). The difference between implementations are system call number.
+System call provides services interface from kernel to user tasks. It's interface implementation is in syscall.c. It merely calls svc (See: `Supervisor Calls`) to switch from thread mode to handler mode (See: `Operating modes`). The difference between implementations are system call number.
 
 * Flow
     * User task calls a system call in thread mode. Functions parameters and return value storage are followed by procedure call standard (See: `Procedure Call Standard for the ARM Architecture`).
-    * syscall.s pass system call number in r7 and switch to handler mode.
+    * syscall.c pass system call number in r7 and switch to handler mode.
     * kernel resumed right after activate() and run related system call according to system call number in r7.
     * kernel saves result and put task information into wait queue.
     * Tasks resume eventually and gets the result.
