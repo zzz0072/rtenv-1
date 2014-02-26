@@ -49,7 +49,7 @@ int main()
     __enable_irq();
 
     tasks[task_count].stack = (void*)init_task(stacks[task_count], &first);
-    tasks[task_count].pid = 0;
+    tasks[task_count].tid = 0;
     tasks[task_count].priority = PRIORITY_DEFAULT;
     task_count++;
 
@@ -89,7 +89,7 @@ int main()
                 memcpy(tasks[task_count].stack, tasks[current_task].stack,
                        used * sizeof(unsigned int));
                 /* Set PID */
-                tasks[task_count].pid = task_count;
+                tasks[task_count].tid = task_count;
                 /* Set priority, inherited from forked task */
                 tasks[task_count].priority = tasks[current_task].priority;
                 /* Set return values in each process */
@@ -102,7 +102,7 @@ int main()
                 task_count++;
             }
             break;
-        case SYS_CALL_GETTID: /* getpid */
+        case SYS_CALL_GETTID: /* gettid */
             tasks[current_task].stack->r0 = current_task;
             break;
         case SYS_CALL_WRITE: /* write */
@@ -198,7 +198,7 @@ int main()
         }
         while (ready_list[i] == NULL)
             i++;
-        current_task = task_pop(&ready_list[i])->pid;
+        current_task = task_pop(&ready_list[i])->tid;
     }
 
     return 0;

@@ -39,7 +39,7 @@ struct user_thread_stack {
 /* Task Control Block */
 struct task_control_block {
     struct user_thread_stack *stack;
-    int pid;
+    int tid;
     int status;
     int priority;
     struct task_control_block **prev;

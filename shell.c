@@ -348,25 +348,25 @@ void export_env_var(int argc, char *argv[])
 /* ps */
 void show_task_info(int argc, char* argv[])
 {
-    char ps_message[] = "PID\tSTATUS\tPRIORITY";
+    char ps_message[] = "TID\tSTATUS\tPRIORITY";
     char *str_to_output = 0;
     int task_i;
 
     printf("%s\n\r", ps_message);
 
     for (task_i = 0; task_i < task_count; task_i++) {
-        char task_info_pid[2];
+        char task_info_tid[2];
         char task_info_status[2];
         char task_info_priority[MAX_ITOA_CHARS];
 
-        task_info_pid[0]='0'+tasks[task_i].pid;
-        task_info_pid[1]='\0';
+        task_info_tid[0]='0'+tasks[task_i].tid;
+        task_info_tid[1]='\0';
         task_info_status[0]='0'+tasks[task_i].status;
         task_info_status[1]='\0';
 
         str_to_output = itoa(tasks[task_i].priority, task_info_priority);
 
-        printf("%s\t%s\t%s\n\r", task_info_pid, task_info_status, str_to_output);
+        printf("%s\t%s\t%s\n\r", task_info_tid, task_info_status, str_to_output);
     }
 }
 

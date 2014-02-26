@@ -77,7 +77,7 @@ int mkfifo(const char *pathname, int mode)
 
 int open(const char *pathname, int flags)
 {
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(pathname) + 1;
     unsigned int fd = -1;
     char buf[4 + 4 + PATH_MAX];
