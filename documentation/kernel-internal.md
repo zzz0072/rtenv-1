@@ -26,7 +26,11 @@ System call provides services interface from kernel to user tasks. It's interfac
 Here is the sequence of main loop:
 
 * kernel switches to a user task.
-    * Done by setting CONTROL register and process stack pointer register to switch from kernel mode to thread mode.
+    * Done by
+        * Write task stack to process stack pointer
+        * Set CONTROL register options
+            * Use process stack pointer
+            * Use Unprivileged level
 * When a system call is invoked in the user task or an interrupt occurred, kernel resumes.
 * kernel runs system call or handle interrupt.
     * timer interrupt will run periodically to force context switch and implements sleep system call.
