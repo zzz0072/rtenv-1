@@ -39,7 +39,7 @@ void show_history(int argc, char *argv[]);
 typedef struct {
     char cmd[MAX_CMDNAME + 1];
     void (*func)(int, char**);
-    char description[MAX_CMDHELP + 1];
+    char desc[MAX_CMDHELP + 1];
 } hcmd_entry;
 
 /* Structure for environment variables. */
@@ -59,12 +59,12 @@ static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
 static const hcmd_entry g_available_cmds[] = {
-    {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
-    {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
-    {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
-    {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
-    {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
-    {.cmd = "ps", .func = show_task_info, .description = "List all the processes."}
+    {.cmd = "echo", .func = show_echo, .desc = "Show words you input."},
+    {.cmd = "export", .func = export_env_var, .desc = "Export environment variables."},
+    {.cmd = "help", .func = show_cmd_info, .desc = "List all commands you can use."},
+    {.cmd = "history", .func = show_history, .desc = "Show latest commands entered."},
+    {.cmd = "man", .func = show_man_page, .desc = "Manual pager."},
+    {.cmd = "ps", .func = show_task_info, .desc = "List all the processes."}
 };
 
 static evar_entry env_var[MAX_ENVCOUNT];
@@ -367,7 +367,7 @@ void show_cmd_info(int argc, char* argv[])
 
     printf("This system has commands as follow\n\r");
     for (i = 0; i < CMD_COUNT; i++) {
-        printf("%s: %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].description);
+        printf("%s: %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
     }
 }
 
@@ -409,7 +409,7 @@ void show_man_page(int argc, char *argv[])
     if (i >= CMD_COUNT)
         return;
 
-    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", g_available_cmds[i].cmd, g_available_cmds[i].description);
+    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
 }
 
 void show_history(int argc, char *argv[])
