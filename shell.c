@@ -67,7 +67,7 @@ static const hcmd_entry g_available_cmds[] = {
     {.cmd = "ps", .func = cmd_task_info, .desc = "List all the processes."}
 };
 
-static evar_entry env_var[MAX_ENVCOUNT];
+static evar_entry g_env_var[MAX_ENVCOUNT];
 
 #define CMD_COUNT (sizeof(g_available_cmds)/sizeof(hcmd_entry))
 /************************
@@ -137,8 +137,8 @@ static char *get_env_var_val(const char *name)
     int i;
 
     for (i = 0; i < g_env_var_count; i++) {
-        if (!strcmp(env_var[i].name, name))
-            return env_var[i].value;
+        if (!strcmp(g_env_var[i].name, name))
+            return g_env_var[i].value;
     }
 
     return NULL;
@@ -328,8 +328,8 @@ void cmd_export(int argc, char *argv[])
         if (env_var_val)
             strcpy(env_var_val, value);
         else if (g_env_var_count < MAX_ENVCOUNT) {
-            strcpy(env_var[g_env_var_count].name, argv[i]);
-            strcpy(env_var[g_env_var_count].value, value);
+            strcpy(g_env_var[g_env_var_count].name, argv[i]);
+            strcpy(g_env_var[g_env_var_count].value, value);
             g_env_var_count++;
         }
     }
