@@ -25,12 +25,12 @@
 #define RT_YES (1)
 
 /* Command handlers. */
-void export_env_var(int argc, char *argv[]);
-void show_echo(int argc, char *argv[]);
-void show_cmd_info(int argc, char *argv[]);
-void show_task_info(int argc, char *argv[]);
-void show_man_page(int argc, char *argv[]);
-void show_history(int argc, char *argv[]);
+void cmd_export(int argc, char *argv[]);
+void cmd_echo(int argc, char *argv[]);
+void cmd_cmd_info(int argc, char *argv[]);
+void cmd_task_info(int argc, char *argv[]);
+void cmd_man_page(int argc, char *argv[]);
+void cmd_history(int argc, char *argv[]);
 
 /**************************
  * Internal data structures
@@ -59,12 +59,12 @@ static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
 static const hcmd_entry g_available_cmds[] = {
-    {.cmd = "echo", .func = show_echo, .desc = "Show words you input."},
-    {.cmd = "export", .func = export_env_var, .desc = "Export environment variables."},
-    {.cmd = "help", .func = show_cmd_info, .desc = "List all commands you can use."},
-    {.cmd = "history", .func = show_history, .desc = "Show latest commands entered."},
-    {.cmd = "man", .func = show_man_page, .desc = "Manual pager."},
-    {.cmd = "ps", .func = show_task_info, .desc = "List all the processes."}
+    {.cmd = "echo", .func = cmd_echo, .desc = "Show words you input."},
+    {.cmd = "export", .func = cmd_export, .desc = "Export environment variables."},
+    {.cmd = "help", .func = cmd_cmd_info, .desc = "List all commands you can use."},
+    {.cmd = "history", .func = cmd_history, .desc = "Show latest commands entered."},
+    {.cmd = "man", .func = cmd_man_page, .desc = "Manual pager."},
+    {.cmd = "ps", .func = cmd_task_info, .desc = "List all the processes."}
 };
 
 static evar_entry env_var[MAX_ENVCOUNT];
@@ -312,7 +312,7 @@ static char *readline(char *prompt)
  * Command handlers
 *************************/
 /* export */
-void export_env_var(int argc, char *argv[])
+void cmd_export(int argc, char *argv[])
 {
     char *env_var_val;
     char *value;
@@ -336,7 +336,7 @@ void export_env_var(int argc, char *argv[])
 }
 
 /* ps */
-void show_task_info(int argc, char* argv[])
+void cmd_task_info(int argc, char* argv[])
 {
     char ps_message[] = "TID\tSTATUS\tPRIORITY";
     char *str_to_output = 0;
@@ -361,7 +361,7 @@ void show_task_info(int argc, char* argv[])
 }
 
 /* help */
-void show_cmd_info(int argc, char* argv[])
+void cmd_cmd_info(int argc, char* argv[])
 {
     int i;
 
@@ -372,7 +372,7 @@ void show_cmd_info(int argc, char* argv[])
 }
 
 /* echo */
-void show_echo(int argc, char* argv[])
+void cmd_echo(int argc, char* argv[])
 {
     const int _n = 1; /* Flag for "-n" option. */
     int flag = 0;
@@ -396,7 +396,7 @@ void show_echo(int argc, char* argv[])
 }
 
 /* man */
-void show_man_page(int argc, char *argv[])
+void cmd_man_page(int argc, char *argv[])
 {
     int i;
 
@@ -412,7 +412,7 @@ void show_man_page(int argc, char *argv[])
     printf("NAME: %s\n\rDESCRIPTION:%s \n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
 }
 
-void show_history(int argc, char *argv[])
+void cmd_history(int argc, char *argv[])
 {
     int i;
 
