@@ -27,9 +27,9 @@
 /* Command handlers. */
 void cmd_export(int argc, char *argv[]);
 void cmd_echo(int argc, char *argv[]);
-void cmd_cmd_info(int argc, char *argv[]);
-void cmd_task_info(int argc, char *argv[]);
-void cmd_man_page(int argc, char *argv[]);
+void cmd_help(int argc, char *argv[]);
+void cmd_ps(int argc, char *argv[]);
+void cmd_man(int argc, char *argv[]);
 void cmd_history(int argc, char *argv[]);
 
 /**************************
@@ -61,10 +61,10 @@ static int g_env_var_count = 0;
 static const hcmd_entry g_available_cmds[] = {
     {.cmd = "echo", .func = cmd_echo, .desc = "Show words you input."},
     {.cmd = "export", .func = cmd_export, .desc = "Export environment variables."},
-    {.cmd = "help", .func = cmd_cmd_info, .desc = "List all commands you can use."},
+    {.cmd = "help", .func = cmd_help, .desc = "List all commands you can use."},
     {.cmd = "history", .func = cmd_history, .desc = "Show latest commands entered."},
-    {.cmd = "man", .func = cmd_man_page, .desc = "Manual pager."},
-    {.cmd = "ps", .func = cmd_task_info, .desc = "List all the processes."}
+    {.cmd = "man", .func = cmd_man, .desc = "Manual pager."},
+    {.cmd = "ps", .func = cmd_ps, .desc = "List all the processes."}
 };
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
@@ -336,7 +336,7 @@ void cmd_export(int argc, char *argv[])
 }
 
 /* ps */
-void cmd_task_info(int argc, char* argv[])
+void cmd_ps(int argc, char* argv[])
 {
     char ps_message[] = "TID\tSTATUS\tPRIORITY";
     char *str_to_output = 0;
@@ -361,7 +361,7 @@ void cmd_task_info(int argc, char* argv[])
 }
 
 /* help */
-void cmd_cmd_info(int argc, char* argv[])
+void cmd_help(int argc, char* argv[])
 {
     int i;
 
@@ -396,7 +396,7 @@ void cmd_echo(int argc, char* argv[])
 }
 
 /* man */
-void cmd_man_page(int argc, char *argv[])
+void cmd_man(int argc, char *argv[])
 {
     int i;
 
