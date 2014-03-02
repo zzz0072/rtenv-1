@@ -54,7 +54,7 @@ typedef struct {
 extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
-static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
+static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
@@ -76,11 +76,11 @@ static evar_entry env_var[MAX_ENVCOUNT];
 static void hist_expand()
 {
     char buf[CMDBUF_SIZE];
-    char *p = g_cmd_hist[g_cur_cmd_hist_pos];
+    char *p = g_typed_cmds[g_cur_cmd_hist_pos];
     char *q;
     int i;
 
-    /* ex: 'help' in g_cmd_hist[] can be run in !h, !he, !hel at command line */
+    /* ex: 'help' in g_typed_cmds[] can be run in !h, !he, !hel at command line */
     for (; *p; p++) {
         if (*p != '!') {
             continue;
@@ -92,9 +92,9 @@ static void hist_expand()
         }
 
         for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
-            if (!strncmp(g_cmd_hist[i % HISTORY_COUNT], p + 1, q - p - 1)) {
+            if (!strncmp(g_typed_cmds[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                 strcpy(buf, q);
-                strcpy(p, g_cmd_hist[i % HISTORY_COUNT]);
+                strcpy(p, g_typed_cmds[i % HISTORY_COUNT]);
                 p += strlen(p);
                 strcpy(p--, buf);
                 return;
@@ -197,7 +197,7 @@ static void run_cmd()
     int i;
 
     hist_expand();
-    strcpy(cmdstr, g_cmd_hist[g_cur_cmd_hist_pos]);
+    strcpy(cmdstr, g_typed_cmds[g_cur_cmd_hist_pos]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
         return;
@@ -417,8 +417,8 @@ void show_history(int argc, char *argv[])
     int i;
 
     for (i = g_cur_cmd_hist_pos + 1; i <= g_cur_cmd_hist_pos + HISTORY_COUNT; i++) {
-        if (g_cmd_hist[i % HISTORY_COUNT][0]) {
-            printf("%s\n\r", g_cmd_hist[i % HISTORY_COUNT]);
+        if (g_typed_cmds[i % HISTORY_COUNT][0]) {
+            printf("%s\n\r", g_typed_cmds[i % HISTORY_COUNT]);
         }
     }
 }
@@ -436,8 +436,8 @@ void shell_task()
             continue;
         }
 
-        strncpy(g_cmd_hist[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
-        run_cmd(); /* cmd string passed by g_cmd_hist */
+        strncpy(g_typed_cmds[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
+        run_cmd(); /* cmd string passed by g_typed_cmds */
         free(read_str);
         read_str = 0;
     }
