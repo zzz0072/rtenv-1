@@ -48,6 +48,9 @@ typedef struct {
     char value[MAX_ENVVALUE + 1];
 } evar_entry;
 
+#define ADD_CMD(cmd_name, msg) \
+    {.cmd = #cmd_name, .func=cmd_##cmd_name, .desc=msg}
+
 /************************
  * Global variables
 *************************/
@@ -59,12 +62,12 @@ static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
 static const hcmd_entry g_available_cmds[] = {
-    {.cmd = "echo", .func = cmd_echo, .desc = "Show words you input."},
-    {.cmd = "export", .func = cmd_export, .desc = "Export environment variables."},
-    {.cmd = "help", .func = cmd_help, .desc = "List all commands you can use."},
-    {.cmd = "history", .func = cmd_history, .desc = "Show latest commands entered."},
-    {.cmd = "man", .func = cmd_man, .desc = "Manual pager."},
-    {.cmd = "ps", .func = cmd_ps, .desc = "List all the processes."}
+    ADD_CMD(history, "List command you typed"),
+    ADD_CMD(export,  "Export variables to enviorment. Usage: VAR=VALUE"),
+    ADD_CMD(echo,    "echo your string"),
+    ADD_CMD(help,    "List avaialbe commands"),
+    ADD_CMD(man,     "manaual for commands"),
+    ADD_CMD(ps,      "List task information"),
 };
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
