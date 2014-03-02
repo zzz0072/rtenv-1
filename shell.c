@@ -58,7 +58,7 @@ static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
-static const hcmd_entry cmd_data[] = {
+static const hcmd_entry g_available_cmds[] = {
     {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
     {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
     {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
@@ -69,7 +69,7 @@ static const hcmd_entry cmd_data[] = {
 
 static evar_entry env_var[MAX_ENVCOUNT];
 
-#define CMD_COUNT (sizeof(cmd_data)/sizeof(hcmd_entry))
+#define CMD_COUNT (sizeof(g_available_cmds)/sizeof(hcmd_entry))
 /************************
  * Internal functions
 *************************/
@@ -218,8 +218,8 @@ static void run_cmd()
     }
 
     for (i = 0; i < CMD_COUNT; i++) {
-        if (!strcmp(argv[0], cmd_data[i].cmd)) {
-            cmd_data[i].func(argc, argv);
+        if (!strcmp(argv[0], g_available_cmds[i].cmd)) {
+            g_available_cmds[i].func(argc, argv);
             break;
         }
     }
@@ -367,7 +367,7 @@ void show_cmd_info(int argc, char* argv[])
 
     printf("This system has commands as follow\n\r");
     for (i = 0; i < CMD_COUNT; i++) {
-        printf("%s: %s\n\r", cmd_data[i].cmd, cmd_data[i].description);
+        printf("%s: %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].description);
     }
 }
 
@@ -403,13 +403,13 @@ void show_man_page(int argc, char *argv[])
     if (argc < 2)
         return;
 
-    for (i = 0; i < CMD_COUNT && strcmp(cmd_data[i].cmd, argv[1]); i++)
+    for (i = 0; i < CMD_COUNT && strcmp(g_available_cmds[i].cmd, argv[1]); i++)
         ;
 
     if (i >= CMD_COUNT)
         return;
 
-    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", cmd_data[i].cmd, cmd_data[i].description);
+    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", g_available_cmds[i].cmd, g_available_cmds[i].description);
 }
 
 void show_history(int argc, char *argv[])
