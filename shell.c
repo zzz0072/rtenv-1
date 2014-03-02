@@ -23,6 +23,7 @@
 
 #define RT_NO  (0)
 #define RT_YES (1)
+
 /* Command handlers. */
 void export_env_var(int argc, char *argv[]);
 void show_echo(int argc, char *argv[]);
@@ -34,17 +35,6 @@ void show_history(int argc, char *argv[]);
 /**************************
  * Internal data structures
 ***************************/
-/* Enumeration for command types. */
-enum {
-    CMD_ECHO = 0,
-    CMD_EXPORT,
-    CMD_HELP,
-    CMD_HISTORY,
-    CMD_MAN,
-    CMD_PS,
-    CMD_COUNT
-} CMD_TYPE;
-
 /* Structure for command handler. */
 typedef struct {
     char cmd[MAX_CMDNAME + 1];
@@ -58,7 +48,6 @@ typedef struct {
     char value[MAX_ENVVALUE + 1];
 } evar_entry;
 
-
 /************************
  * Global variables
 *************************/
@@ -69,17 +58,18 @@ static char g_cmd_hist[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
-static const hcmd_entry cmd_data[CMD_COUNT] = {
-    [CMD_ECHO] = {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
-    [CMD_EXPORT] = {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
-    [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
-    [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
-    [CMD_MAN] = {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
-    [CMD_PS] = {.cmd = "ps", .func = show_task_info, .description = "List all the processes."}
+static const hcmd_entry cmd_data[] = {
+    {.cmd = "echo", .func = show_echo, .description = "Show words you input."},
+    {.cmd = "export", .func = export_env_var, .description = "Export environment variables."},
+    {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
+    {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
+    {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
+    {.cmd = "ps", .func = show_task_info, .description = "List all the processes."}
 };
 
 static evar_entry env_var[MAX_ENVCOUNT];
 
+#define CMD_COUNT (sizeof(cmd_data)/sizeof(hcmd_entry))
 /************************
  * Internal functions
 *************************/
