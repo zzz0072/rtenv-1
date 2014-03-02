@@ -62,7 +62,7 @@ static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
 
 static const hcmd_entry g_available_cmds[] = {
-    ADD_CMD(history, "List command you typed"),
+    ADD_CMD(history, "List commands you typed"),
     ADD_CMD(export,  "Export variables to enviorment. Usage: VAR=VALUE"),
     ADD_CMD(echo,    "echo your string"),
     ADD_CMD(help,    "List avaialbe commands"),
@@ -368,10 +368,18 @@ void cmd_help(int argc, char* argv[])
 {
     int i;
 
-    printf("This system has commands as follow\n\r");
+    printf("Available commands:\n\n\r");
     for (i = 0; i < CMD_COUNT; i++) {
-        printf("%s: %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
+        printf("%s\t<-- %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
     }
+
+    printf("\nMore details:\n\r");
+    printf("\tEnviorment variable supported:\n\r");
+    printf("\tSet-> export VAR=VAL\n\r");
+    printf("\tGet-> $VAR\n\n\r");
+
+    printf("\tYou can use ! to run command in history.\n\r");
+    printf("\tEx: !p to run ps if ps is in history\n\n\r");
 }
 
 /* echo */
@@ -433,6 +441,7 @@ void shell_task()
 {
     char *read_str = 0;
 
+    cmd_help(0, 0);
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
         read_str = readline(PROMPT);
         if (!read_str) {
