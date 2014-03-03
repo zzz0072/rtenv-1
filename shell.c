@@ -85,15 +85,18 @@ static void hist_expand()
 
     /* ex: 'help' in g_typed_cmds[] can be run in !h, !he, !hel at command line */
     for (; *p; p++) {
+        /* loop until first ! */
         if (*p != '!') {
             continue;
         }
 
+        /* Skip white spaces */
         q = p;
         while (*q && !isspace((unsigned char)*q)) {
             q++;
         }
 
+        /* since we have !, so start partial comparison */
         for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
             if (!strncmp(g_typed_cmds[i % HISTORY_COUNT], p + 1, q - p - 1)) {
                 strcpy(buf, q);
