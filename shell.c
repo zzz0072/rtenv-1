@@ -57,6 +57,12 @@ typedef struct {
 extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
+/* Need to display last command we typed rather than previous command 
+ * when receiving first arrow key
+ * ex: hist_cmd: ps help
+ *     We expect to see ps at first up key than help at second up key */
+static char g_first_arrow_key = RT_YES;
+
 static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
@@ -234,6 +240,55 @@ static void run_cmd()
     }
 }
 
+static char* retrieve_hist_cmd(char key_val, char *buf, unsigned int buf_size)
+{
+    /* Get last command: at this pointer, g_cur_cmd_hist_pos is still empty */
+    int new_cmd_hist_pos = g_cur_cmd_hist_pos - 1;
+    int previous_cmd = new_cmd_hist_pos;
+
+    /* Regular checking */
+    if (g_typed_cmds[g_cur_cmd_hist_pos - 1][0] == 0 ||
+            buf == 0 || buf_size == 0) {
+        return 0;
+    }
+
+    /* Leverage history */
+    if (key_val == 'A') { /* Up key */
+        if (g_first_arrow_key == RT_NO) {
+            new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT - 1) % HISTORY_COUNT;
+        }
+
+        if (g_typed_cmds[new_cmd_hist_pos][0] == 0) {
+            return 0;
+        }
+    }
+    else if (key_val == 'B') { /* Down key */
+        /* Do we need to update history position? */
+        if (g_first_arrow_key == RT_NO) {
+            new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT + 1) % HISTORY_COUNT;
+        }
+
+        if (g_typed_cmds[new_cmd_hist_pos][0] == 0) {
+            return 0;
+        }
+    }
+
+    memset(buf, 0x00, buf_size);
+    /* skip \n in history buffer */
+    strncpy(buf, g_typed_cmds[new_cmd_hist_pos],
+            strlen(g_typed_cmds[new_cmd_hist_pos]) - 1);
+
+    if (g_first_arrow_key == RT_YES) {
+        g_first_arrow_key = RT_NO;
+    }
+
+    g_cur_cmd_hist_pos = new_cmd_hist_pos + 1;
+
+    /* previous cmmand is used to clean up unused char to fix
+     * history -> ps, and console showed psstory */
+    return g_typed_cmds[previous_cmd];
+}
+
 
 static char *readline(char *prompt)
 {
@@ -261,8 +316,34 @@ static char *readline(char *prompt)
             last_char_is_ESC = RT_NO;
 
             if (ch[0] == '[') {
+                char *previous_cmd = 0;
+
                 /* Direction key: ESC[A ~ ESC[D */
                 read(fdin, &ch[0], 1);
+
+                /* Repeat previous command? */
+                previous_cmd = retrieve_hist_cmd(ch[0], read_buf, CMDBUF_SIZE);
+                if (previous_cmd) {
+                    int previous_cmd_len = strlen(previous_cmd);
+                    int i = 0;
+
+                    curr_char = strlen(read_buf);
+                    printf("\r%s%s", prompt, read_buf);
+
+                    /* Clear a line to avoid display pslp due to previous
+                     * is ps and help
+                     *
+                     * The overhead should be acceptable based on the
+                     * assumption that user key events cost should be much 
+                     * less than other tasks */
+
+                     if (curr_char < previous_cmd_len) {
+                         for (i = 0; i < (previous_cmd_len - curr_char); i++) {
+                             printf(" ");
+                         }
+                     }
+                     continue;
+                }
 
                 /* Home:      ESC[1~
                  * End:       ESC[2~
@@ -310,6 +391,7 @@ static char *readline(char *prompt)
     }
     printf("\n\r");
 
+    g_first_arrow_key = RT_YES;
     return read_buf;
 }
 
