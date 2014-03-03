@@ -57,12 +57,6 @@ typedef struct {
 extern size_t task_count;
 extern struct task_control_block tasks[TASK_LIMIT];
 
-/* Need to display last command we typed rather than previous command 
- * when receiving first arrow key
- * ex: hist_cmd: ps help
- *     We expect to see ps at first up key than help at second up key */
-static char g_first_arrow_key = RT_YES;
-
 static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
 static int g_env_var_count = 0;
@@ -240,7 +234,10 @@ static void run_cmd()
     }
 }
 
-static char* retrieve_hist_cmd(char key_val, char *buf, unsigned int buf_size)
+static char* retrieve_hist_cmd(char key_val,
+                               char *buf,
+                               unsigned int buf_size,
+                               char is_first_arrow_key)
 {
     /* Get last command: at this pointer, g_cur_cmd_hist_pos is still empty */
     int new_cmd_hist_pos = g_cur_cmd_hist_pos - 1;
@@ -254,7 +251,7 @@ static char* retrieve_hist_cmd(char key_val, char *buf, unsigned int buf_size)
 
     /* Leverage history */
     if (key_val == 'A') { /* Up key */
-        if (g_first_arrow_key == RT_NO) {
+        if (is_first_arrow_key == RT_NO) {
             new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT - 1) % HISTORY_COUNT;
         }
 
@@ -264,7 +261,7 @@ static char* retrieve_hist_cmd(char key_val, char *buf, unsigned int buf_size)
     }
     else if (key_val == 'B') { /* Down key */
         /* Do we need to update history position? */
-        if (g_first_arrow_key == RT_NO) {
+        if (is_first_arrow_key == RT_NO) {
             new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT + 1) % HISTORY_COUNT;
         }
 
@@ -278,8 +275,8 @@ static char* retrieve_hist_cmd(char key_val, char *buf, unsigned int buf_size)
     strncpy(buf, g_typed_cmds[new_cmd_hist_pos],
             strlen(g_typed_cmds[new_cmd_hist_pos]) - 1);
 
-    if (g_first_arrow_key == RT_YES) {
-        g_first_arrow_key = RT_NO;
+    if (is_first_arrow_key == RT_YES) {
+        is_first_arrow_key = RT_NO;
     }
 
     g_cur_cmd_hist_pos = new_cmd_hist_pos + 1;
@@ -295,6 +292,7 @@ static char *readline(char *prompt)
     int fdin;
     char ch[] = {0x00, 0x00};
     char last_char_is_ESC = RT_NO;
+    char is_first_arrow_key = RT_YES;
     int curr_char;
     char *read_buf = (char *)malloc(CMDBUF_SIZE);
 
@@ -322,13 +320,22 @@ static char *readline(char *prompt)
                 read(fdin, &ch[0], 1);
 
                 /* Repeat previous command? */
-                previous_cmd = retrieve_hist_cmd(ch[0], read_buf, CMDBUF_SIZE);
+                previous_cmd = retrieve_hist_cmd(ch[0],
+                                                read_buf,
+                                                CMDBUF_SIZE,
+                                                is_first_arrow_key);
                 if (previous_cmd) {
                     int previous_cmd_len = strlen(previous_cmd);
                     int i = 0;
 
+                    /* Update command line */
                     curr_char = strlen(read_buf);
                     printf("\r%s%s", prompt, read_buf);
+
+                    /* Toggle is_first_arrow_key */
+                    if (is_first_arrow_key == RT_YES) {
+                        is_first_arrow_key = RT_NO;
+                    }
 
                     /* Clear a line to avoid display pslp due to previous
                      * is ps and help
@@ -391,7 +398,6 @@ static char *readline(char *prompt)
     }
     printf("\n\r");
 
-    g_first_arrow_key = RT_YES;
     return read_buf;
 }
 
