@@ -38,7 +38,8 @@ RTENV_SRCS = \
 		path_server.c \
 		shell.c  \
 		malloc.c \
-		kernel.c
+		kernel.c \
+		unit_test.c
 
 SRCS= \
 	$(CMSIS_SRCS) \
@@ -49,7 +50,7 @@ OBJS_1 = $(patsubst %.c, %.o, $(SRCS))
 OBJS   = $(patsubst %.s, %.o, $(OBJS_1))
 DEPS   = ${OBJS:.o=.d}
 # Basic configurations
-CFLAGS += -g3
+CFLAGS += -g3 $(DEBUG_FLAGS)
 CFLAGS += -Wall -std=c99 -MMD $(INCS)
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
@@ -87,7 +88,8 @@ qemu: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-kernel main.bin -monitor null
 
-qemudbg: main.bin $(QEMU_STM32)
+qemudbg: unit_test.c unit_test.h
+	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-kernel main.bin
@@ -96,7 +98,8 @@ qemudbg: main.bin $(QEMU_STM32)
 qemu_remote: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 -kernel main.bin -vnc :1
 
-qemudbg_remote: main.bin $(QEMU_STM32)
+qemudbg_remote: unit_test.c unit_test.h
+	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-kernel main.bin \
@@ -128,7 +131,19 @@ qemuauto_remote: main.bin gdbscript
 	$(CROSS_COMPILE)gdb -x gdbscript&
 	sleep 5
 
+
+
+check: unit_test.c unit_test.h
+	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
+	$(QEMU_STM32) -M stm32-p103 \
+		-gdb tcp::3333 -S \
+		-serial stdio \
+		-kernel main.bin -monitor null >/dev/null &
+	make -C unit_tests CROSS_COMPILE=$(CROSS_COMPILE)
+	@pkill -9 $(notdir $(QEMU_STM32))
+
 clean:
 	rm -f *.elf *.bin *.list gdb.txt $(OBJS) $(DEPS)
+	make -C unit_tests clean
 
 -include $(DEPS)

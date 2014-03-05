@@ -1,0 +1,30 @@
+source qemudbg_init.in
+set logging on
+set strcpy(g_typed_cmds[0], "help")
+set strcpy(g_typed_cmds[1], "echo Hello!")
+set strcpy(g_typed_cmds[2], "history")
+set strcpy(g_typed_cmds[3], "!e")
+set g_cur_cmd_hist_pos=3
+echo Current history:\n
+set $r0=0
+while $r0<g_cur_cmd_hist_pos
+   printf "#%d %s\n", $r0, g_typed_cmds[$r0]
+   set $r0++
+end
+printf "Processed command: %s\n", g_typed_cmds[3]
+call hist_expand()
+if !strcmp(g_typed_cmds[3], g_typed_cmds[1])
+   echo Pass: the latest command starting with e is found\n
+else
+   printf "Fail: \"%s\" is found, shall be \"%s\"\n", g_typed_cmds[3], g_typed_cmds[1]
+end
+set strcpy(g_typed_cmds[4], "!h")
+set g_cur_cmd_hist_pos=4
+printf "Processed command: %s\n", g_typed_cmds[4]
+call hist_expand()
+if !strcmp(g_typed_cmds[4], g_typed_cmds[2])
+   echo Pass: the latest command starting with h is found\n
+else
+   printf "Fail: \"%s\" is found, shall be \"%s\"\n", g_typed_cmds[4], g_typed_cmds[2]
+end
+

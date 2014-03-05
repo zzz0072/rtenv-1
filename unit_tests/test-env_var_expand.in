@@ -1,0 +1,25 @@
+source qemudbg_init.in
+set logging on
+set strcpy(g_env_var[0].name, "EDITOR")
+set strcpy(g_env_var[0].value, "vi")
+set strcpy(g_env_var[1].name, "PATH")
+set strcpy(g_env_var[1].value, "~")
+set strcpy(g_env_var[2].name, "LC_ALL")
+set strcpy(g_env_var[2].value, "UTF8")
+set g_env_var_count=3
+set strcpy(g_typed_cmds[0], "PATH=/:$PATH")
+show_environment_variables
+printf "Processed argument: %s\n", g_typed_cmds[0]
+set $r0=env_var_expand(g_typed_cmds[1], g_typed_cmds[0])
+set strcpy(g_typed_cmds[0]+7, g_env_var[1].value)
+if !strcmp(g_typed_cmds[1], g_typed_cmds[0])
+   echo Pass: replaced string is correct\n
+else
+   printf "Fail: env_var_expand results in \"%s\", shall be \"%s\"\n", g_typed_cmds[1], g_typed_cmds[0]
+end
+if $r0==strlen(g_typed_cmds[1])
+   echo Pass: correct returned value\n
+else
+   printf "Fail: env_var_expand returns %d, shall be length of replaced string\n", $r0
+end
+

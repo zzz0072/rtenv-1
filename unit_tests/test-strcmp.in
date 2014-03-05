@@ -1,0 +1,25 @@
+source qemudbg_init.in
+set logging on
+set strcpy(g_typed_cmds[0], "def")
+set strcpy(g_typed_cmds[1], "def")
+set $r0=strcmp(g_typed_cmds[0], g_typed_cmds[1])
+if !$r0
+   printf "Pass: strcmp(\"%s\", \"%s\") is 0\n", g_typed_cmds[0], g_typed_cmds[1]
+else
+   printf "Fail: strcmp(\"%s\", \"%s\") is %d, shall be 0\n", g_typed_cmds[0], g_typed_cmds[1], $r0
+end
+set g_typed_cmds[0][0]='c'
+set $r0=strcmp(g_typed_cmds[0], g_typed_cmds[1])
+if $r0<0
+   printf "Pass: strcmp(\"%s\", \"%s\") returns negative value\n", g_typed_cmds[0], g_typed_cmds[1]
+else
+   printf "Fail: strcmp(\"%s\", \"%s\") is %d, shall be negative\n", g_typed_cmds[0], g_typed_cmds[1], $r0
+end
+set g_typed_cmds[0][0]='g'
+set $r0=strcmp(g_typed_cmds[0], g_typed_cmds[1])
+if $r0>0
+   printf "Pass: strcmp(\"%s\", \"%s\") returns positive value\n", g_typed_cmds[0], g_typed_cmds[1]
+else
+   printf "Fail: strcmp(\"%s\", \"%s\") is %d, shall be positive\n", g_typed_cmds[0], g_typed_cmds[1], $r0
+end
+

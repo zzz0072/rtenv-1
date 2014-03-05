@@ -12,6 +12,10 @@
 #include "shell.h"
 #include "malloc.h"
 
+#ifdef DEBUG
+#include "unit_test.h"
+#endif
+
 /*Global Variables*/
 size_t task_count = 0;
 struct task_control_block tasks[TASK_LIMIT];
@@ -200,6 +204,11 @@ int main()
             i++;
         current_task = task_pop(&ready_list[i])->tid;
     }
+
+#ifdef DEBUG
+    unit_test();
+#endif
+
 
     return 0;
 }

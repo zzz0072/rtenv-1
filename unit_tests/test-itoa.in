@@ -1,0 +1,21 @@
+source qemudbg_init.in
+set logging on
+set num_to_string(0, 10, g_typed_cmds[0], 0)
+if !strcmp(g_typed_cmds[0], "0")
+   echo Pass: num_to_string correctly converts 0 into "0"\n
+else
+   printf "Fail: num_to_string converts 0 into \"%s\", shall be \"0\"\n", g_typed_cmds[0]
+end
+set num_to_string(-32768, 10, g_typed_cmds[0], 0)
+if !strcmp(g_typed_cmds[0], "-32768")
+   echo Pass: num_to_string correctly converts -32768 into "-32768"\n
+else
+   printf "Fail: num_to_string converts -32768 into \"%s\", shall be \"-32768\"\n", g_typed_cmds[0]
+end
+set num_to_string(32767, 10, g_typed_cmds[0], 0)
+if !strcmp(g_typed_cmds[0], "32767")
+   echo Pass: num_to_string correctly converts 32767 into "32767"\n
+else
+   printf "Fail: num_to_string converts 32767 into \"%s\", shall be \"32767\"\n", g_typed_cmds[0]
+end
+

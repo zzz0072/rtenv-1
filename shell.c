@@ -5,16 +5,9 @@
 #include "rt_string.h"
 #include "syscall.h"
 #include "malloc.h"
+#include "shell.h"
 
 /* Internal defines */
-#define MAX_CMDNAME 19
-#define MAX_ARGC 19
-#define MAX_CMDHELP 1023
-#define HISTORY_COUNT 20
-#define CMDBUF_SIZE 100
-#define MAX_ENVCOUNT 30
-#define MAX_ENVNAME 15
-#define MAX_ENVVALUE 127
 #define PROMPT USER_NAME "@" USER_NAME "-STM32:~$ "
 
 #define BACKSPACE (127)
@@ -41,12 +34,6 @@ typedef struct {
     void (*func)(int, char**);
     char desc[MAX_CMDHELP + 1];
 } hcmd_entry;
-
-/* Structure for environment variables. */
-typedef struct {
-    char name[MAX_ENVNAME + 1];
-    char value[MAX_ENVVALUE + 1];
-} evar_entry;
 
 #define ADD_CMD(cmd_name, msg) \
     {.cmd = #cmd_name, .func=cmd_##cmd_name, .desc=msg}

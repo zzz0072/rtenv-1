@@ -1,0 +1,32 @@
+source qemudbg_init.in
+set logging on
+set strcpy(g_env_var[0].name, "EDITOR")
+set strcpy(g_env_var[0].value, "gedit")
+set strcpy(g_env_var[1].name, "PATH")
+set strcpy(g_env_var[1].value, "~")
+set strcpy(g_env_var[2].name, "LC_ALL")
+set strcpy(g_env_var[2].value, "UTF8")
+set g_env_var_count=3
+set strcpy(g_typed_cmds[0], "export")
+set strcpy(g_typed_cmds[1], "EDITOR=vi")
+show_environment_variables
+echo Processed argv list:\n
+set $r0=0
+set $sp=$sp-2*sizeof(char*)
+while $r0<2
+   printf "#%d %s\n", $r0, g_typed_cmds[$r0]
+   set ((char**)$sp)[$r0]=g_typed_cmds[$r0]
+   set $r0++
+end
+call cmd_export(2, (char**)$sp)
+if !strcmp(g_env_var[0].value, g_typed_cmds[1]+7)
+   echo Pass: exported value is correct\n
+else
+   printf "Fail: %s=%s, shall be %s\n", g_env_var[0].name, g_env_var[0].value, g_typed_cmds[1]+7
+end
+if g_env_var_count==3
+   echo Pass: correct value of g_env_var_count\n
+else
+   printf "Fail: g_env_var_count is %d, shall be 3\n", g_env_var_count
+end
+
