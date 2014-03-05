@@ -45,23 +45,12 @@ SRCS= \
 	$(STM32_SRCS) \
 	$(RTENV_SRCS)
 
-# Header files
-HEADERS = \
-		RTOSConfig.h     \
-		stm32f10x_conf.h \
-		stm32_p103.h     \
-		rt_string.h      \
-		task.h           \
-		path_server.h    \
-		serial.h         \
-		shell.h          \
-		malloc.h         \
-		syscall_def.h    \
-		syscall.h
-
+OBJS_1 = $(patsubst %.c, %.o, $(SRCS))
+OBJS   = $(patsubst %.s, %.o, $(OBJS_1))
+DEPS   = ${OBJS:.o=.d}
 # Basic configurations
 CFLAGS += -g3
-CFLAGS += -Wall -std=c99
+CFLAGS += -Wall -std=c99 -MMD $(INCS)
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
 
@@ -85,11 +74,14 @@ INCS =  -I . \
 #----------------------------------------------------------------------------------
 all: main.bin
 
-main.bin: $(SRCS) $(HEADERS)
+main.bin: $(OBJS)
 	$(CROSS_COMPILE)gcc -Wl,-Tmain.ld -nostartfiles \
-		$(INCS) $(CFLAGS) $(SRCS) -o main.elf
+		$(CFLAGS) $(OBJS) -o main.elf
 	$(CROSS_COMPILE)objcopy -Obinary main.elf main.bin
 	$(CROSS_COMPILE)objdump -S main.elf > main.list
+
+%.o:%.s
+	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
 qemu: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
@@ -137,4 +129,6 @@ qemuauto_remote: main.bin gdbscript
 	sleep 5
 
 clean:
-	rm -f *.elf *.bin *.list gdb.txt
+	rm -f *.elf *.bin *.list gdb.txt $(OBJS) $(DEPS)
+
+-include $(DEPS)
