@@ -16,6 +16,7 @@ all:$(LOG_FILES)
 %.log: %.in
 	@echo
 	$(CROSS_COMPILE)gdb -batch -x $^
+	@grep -v Fail -q gdb.txt
 	@mv -f gdb.txt $@
 
 clean:
