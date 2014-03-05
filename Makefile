@@ -139,6 +139,8 @@ check: unit_test.c unit_test.h
 		-gdb tcp::3333 -S \
 		-serial stdio \
 		-kernel main.bin -monitor null >/dev/null &
+	# Dirty hack to force running tests every time
+	make -C unit_tests clean
 	make -C unit_tests CROSS_COMPILE=$(CROSS_COMPILE)
 	@pkill -9 $(notdir $(QEMU_STM32))
 
