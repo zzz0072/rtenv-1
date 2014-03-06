@@ -12,7 +12,7 @@
 #include "shell.h"
 #include "malloc.h"
 
-#ifdef DEBUG
+#ifdef UNIT_TEST
 #include "unit_test.h"
 #endif
 
@@ -205,7 +205,7 @@ int main()
         current_task = task_pop(&ready_list[i])->tid;
     }
 
-#ifdef DEBUG
+#ifdef UNIT_TEST
     unit_test();
 #endif
 

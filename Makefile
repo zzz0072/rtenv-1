@@ -49,8 +49,11 @@ SRCS= \
 OBJS_1 = $(patsubst %.c, %.o, $(SRCS))
 OBJS   = $(patsubst %.s, %.o, $(OBJS_1))
 DEPS   = ${OBJS:.o=.d}
+
 # Basic configurations
-CFLAGS += -g3 $(DEBUG_FLAGS)
+DEBUG_FLAGS = -g3 $(UNIT_TEST)
+
+CFLAGS += $(DEBUG_FLAGS)
 CFLAGS += -Wall -std=c99 -MMD $(INCS)
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
@@ -88,8 +91,7 @@ qemu: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-kernel main.bin -monitor null
 
-qemudbg: unit_test.c unit_test.h
-	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
+qemudbg: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-kernel main.bin
@@ -98,8 +100,7 @@ qemudbg: unit_test.c unit_test.h
 qemu_remote: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 -kernel main.bin -vnc :1
 
-qemudbg_remote: unit_test.c unit_test.h
-	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
+qemudbg_remote: main.bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-kernel main.bin \
@@ -134,7 +135,7 @@ qemuauto_remote: main.bin gdbscript
 
 
 check: unit_test.c unit_test.h
-	$(MAKE) main.bin DEBUG_FLAGS=-DDEBUG
+	$(MAKE) main.bin UNIT_TEST=-DUNIT_TEST
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-serial stdio \
