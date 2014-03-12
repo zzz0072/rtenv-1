@@ -117,21 +117,6 @@ qemudbg_remote_bg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 		-kernel $(OUT_DIR)/$(TARGET).bin \
 		-vnc :1 &
 
-emu: $(OUT_DIR)/$(TARGET).bin
-	bash emulate.sh $(OUT_DIR)/$(TARGET).bin
-
-qemuauto: $(OUT_DIR)/$(TARGET).bin gdbscript
-	bash emulate.sh $(OUT_DIR)/$(TARGET).bin &
-	sleep 1
-	$(CROSS_COMPILE)gdb -x gdbscript&
-	sleep 5
-
-qemuauto_remote: $(OUT_DIR)/$(TARGET).bin gdbscript
-	bash emulate_remote.sh $(OUT_DIR)/$(TARGET).bin &
-	sleep 1
-	$(CROSS_COMPILE)gdb -x gdbscript&
-	sleep 5
-
 check: src/unit_test.c include/unit_test.h
 	$(MAKE) $(OUT_DIR)/$(TARGET).bin UNIT_TEST=-DUNIT_TEST
 	$(QEMU_STM32) -M stm32-p103 \
