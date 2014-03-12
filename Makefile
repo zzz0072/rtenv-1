@@ -4,6 +4,7 @@ CC := $(CROSS_COMPILE)gcc
 
 # TARGET settings
 OUT_DIR=build
+TARGET=rtenv
 
 # QEMU PATH
 QEMU_STM32 ?= ../qemu_stm32/arm-softmmu/qemu-system-arm
@@ -83,13 +84,11 @@ INCS =  -I . \
 		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc \
 
 #----------------------------------------------------------------------------------
-all: main.bin
-
-main.bin: $(OUT_OBJS)
-	$(CROSS_COMPILE)gcc -Wl,-Tmain.ld -nostartfiles \
-		$(CFLAGS) $(OUT_OBJS) -o main.elf
-	$(CROSS_COMPILE)objcopy -Obinary main.elf main.bin
-	$(CROSS_COMPILE)objdump -S main.elf > main.list
+$(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
+	$(CROSS_COMPILE)gcc -Wl,-T$(TARGET).ld -nostartfiles \
+		$(CFLAGS) $(OUT_OBJS) -o $(OUT_DIR)/$(TARGET).elf
+	$(CROSS_COMPILE)objcopy -Obinary $(OUT_DIR)/$(TARGET).elf $@
+	$(CROSS_COMPILE)objdump -S $(OUT_DIR)/$(TARGET).elf > $(OUT_DIR)/$(TARGET).list
 
 $(OUT_DIR)/%.o: %.s
 	mkdir -p $(dir $@)
@@ -99,63 +98,63 @@ $(OUT_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
-qemu: main.bin $(QEMU_STM32)
+qemu: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
-		-kernel main.bin -monitor null
+		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null
 
-qemudbg: main.bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-gdb tcp::3333 -S \
-		-kernel main.bin
-
-qemu_remote: main.bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 -kernel main.bin -vnc :1
-
-qemudbg_remote: main.bin $(QEMU_STM32)
+qemudbg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
-		-kernel main.bin \
+		-kernel $(OUT_DIR)/$(TARGET).bin
+
+qemu_remote: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
+	$(QEMU_STM32) -M stm32-p103 -kernel $(OUT_DIR)/$(TARGET).bin -vnc :1
+
+qemudbg_remote: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
+	$(QEMU_STM32) -M stm32-p103 \
+		-gdb tcp::3333 -S \
+		-kernel $(OUT_DIR)/$(TARGET).bin \
 		-vnc :1
 
-qemu_remote_bg: main.bin $(QEMU_STM32)
+qemu_remote_bg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
-		-kernel main.bin \
+		-kernel $(OUT_DIR)/$(TARGET).bin \
 		-vnc :1 &
 
-qemudbg_remote_bg: main.bin $(QEMU_STM32)
+qemudbg_remote_bg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
-		-kernel main.bin \
+		-kernel $(OUT_DIR)/$(TARGET).bin \
 		-vnc :1 &
 
-emu: main.bin
-	bash emulate.sh main.bin
+emu: $(OUT_DIR)/$(TARGET).bin
+	bash emulate.sh $(OUT_DIR)/$(TARGET).bin
 
-qemuauto: main.bin gdbscript
-	bash emulate.sh main.bin &
+qemuauto: $(OUT_DIR)/$(TARGET).bin gdbscript
+	bash emulate.sh $(OUT_DIR)/$(TARGET).bin &
 	sleep 1
 	$(CROSS_COMPILE)gdb -x gdbscript&
 	sleep 5
 
-qemuauto_remote: main.bin gdbscript
-	bash emulate_remote.sh main.bin &
+qemuauto_remote: $(OUT_DIR)/$(TARGET).bin gdbscript
+	bash emulate_remote.sh $(OUT_DIR)/$(TARGET).bin &
 	sleep 1
 	$(CROSS_COMPILE)gdb -x gdbscript&
 	sleep 5
 
 check: unit_test.c unit_test.h
-	$(MAKE) main.bin UNIT_TEST=-DUNIT_TEST
+	$(MAKE) $(OUT_DIR)/$(TARGET).bin UNIT_TEST=-DUNIT_TEST
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-serial stdio \
-		-kernel main.bin -monitor null >/dev/null &
+		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null >/dev/null &
 	# Dirty hack to force running tests every time
 	make -C unit_tests clean
 	make -C unit_tests CROSS_COMPILE=$(CROSS_COMPILE)
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
-	rm -fr *.elf *.bin *.list gdb.txt $(OUT_DIR)
+	rm -fr gdb.txt $(OUT_DIR)
 	make -C unit_tests clean
 
 -include $(DEPS)
