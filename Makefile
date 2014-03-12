@@ -46,8 +46,8 @@ SRCS= \
 	$(STM32_SRCS) \
 	$(RTENV_SRCS)
 
-OBJS_1 = $(patsubst %.c, %.o, $(SRCS))
-OBJS   = $(patsubst %.s, %.o, $(OBJS_1))
+C_OBJS = $(patsubst %.c, %.o, $(SRCS))   # translate *.c to *.o
+OBJS   = $(patsubst %.s, %.o, $(C_OBJS)) # also *.s to *.o files
 DEPS   = ${OBJS:.o=.d}
 
 # Basic configurations
