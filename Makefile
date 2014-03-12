@@ -32,7 +32,7 @@ STM32_SRCS = \
 		$(STM32_LIB)/src/misc.c
 
 # rtenv sources
-RTENV_SRCS = \
+RTENV_SRC = \
 		context_switch.s \
 		syscall.c        \
 		stm32_p103.c     \
@@ -44,6 +44,8 @@ RTENV_SRCS = \
 		malloc.c         \
 		kernel.c         \
 		unit_test.c
+
+RTENV_SRCS = $(addprefix src/, $(RTENV_SRC))
 
 SRCS= \
 	$(CMSIS_SRCS) \
@@ -77,7 +79,7 @@ LIBDIR = .
 CMSIS_LIB=$(LIBDIR)/libraries/CMSIS/$(ARCH)
 STM32_LIB=$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver
 
-INCS =  -I . \
+INCS =  -Iinclude \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/CoreSupport \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(CMSIS_LIB)/CM3/DeviceSupport/ST/STM32F10x \
@@ -85,7 +87,7 @@ INCS =  -I . \
 
 #----------------------------------------------------------------------------------
 $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
-	$(CROSS_COMPILE)gcc -Wl,-T$(TARGET).ld -nostartfiles \
+	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
 		$(CFLAGS) $(OUT_OBJS) -o $(OUT_DIR)/$(TARGET).elf
 	$(CROSS_COMPILE)objcopy -Obinary $(OUT_DIR)/$(TARGET).elf $@
 	$(CROSS_COMPILE)objdump -S $(OUT_DIR)/$(TARGET).elf > $(OUT_DIR)/$(TARGET).list
