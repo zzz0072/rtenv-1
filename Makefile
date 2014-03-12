@@ -32,25 +32,19 @@ STM32_SRCS = \
 		$(STM32_LIB)/src/misc.c
 
 # rtenv sources
-RTENV_SRC = \
-		context_switch.s \
-		syscall.c        \
-		stm32_p103.c     \
-		rt_string.c      \
-		task.c           \
-		serial.c         \
-		path_server.c    \
-		shell.c          \
-		malloc.c         \
-		kernel.c         \
-		unit_test.c
+RTENV_SRCS = $(shell ls src/*.c src/*.s)
 
-RTENV_SRCS = $(addprefix src/, $(RTENV_SRC))
 
 SRCS= \
 	$(CMSIS_SRCS) \
 	$(STM32_SRCS) \
 	$(RTENV_SRCS)
+
+ifeq ($(USE_ASM_OPTI_FUNC),YES)
+	SRCS+=src/asm-opti/memcpy.s
+
+	CFLAGS+=-DUSE_ASM_OPTI_FUNC
+endif
 
 # Binary generation
 C_OBJS = $(patsubst %.c, %.o, $(SRCS))   # translate *.c to *.o
@@ -67,12 +61,6 @@ CFLAGS += $(DEBUG_FLAGS)
 CFLAGS += -Wall -std=c99 -MMD $(INCS)
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
-
-ifeq ($(USE_ASM_OPTI_FUNC),YES)
-	SRCS+=memcpy.s
-
-	CFLAGS+=-DUSE_ASM_OPTI_FUNC
-endif
 
 # Include PATH
 LIBDIR = .
