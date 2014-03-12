@@ -2,6 +2,9 @@
 CROSS_COMPILE ?= arm-none-eabi-
 CC := $(CROSS_COMPILE)gcc
 
+# TARGET settings
+OUT_DIR=build
+
 # QEMU PATH
 QEMU_STM32 ?= ../qemu_stm32/arm-softmmu/qemu-system-arm
 
@@ -46,9 +49,13 @@ SRCS= \
 	$(STM32_SRCS) \
 	$(RTENV_SRCS)
 
+# Binary generation
 C_OBJS = $(patsubst %.c, %.o, $(SRCS))   # translate *.c to *.o
 OBJS   = $(patsubst %.s, %.o, $(C_OBJS)) # also *.s to *.o files
-DEPS   = ${OBJS:.o=.d}
+
+OUT_OBJS = $(addprefix $(OUT_DIR)/, $(OBJS))
+
+DEPS   = ${OUT_OBJS:.o=.d}
 
 # Basic configurations
 DEBUG_FLAGS = -g3 $(UNIT_TEST)
@@ -78,13 +85,18 @@ INCS =  -I . \
 #----------------------------------------------------------------------------------
 all: main.bin
 
-main.bin: $(OBJS)
+main.bin: $(OUT_OBJS)
 	$(CROSS_COMPILE)gcc -Wl,-Tmain.ld -nostartfiles \
-		$(CFLAGS) $(OBJS) -o main.elf
+		$(CFLAGS) $(OUT_OBJS) -o main.elf
 	$(CROSS_COMPILE)objcopy -Obinary main.elf main.bin
 	$(CROSS_COMPILE)objdump -S main.elf > main.list
 
-%.o:%.s
+$(OUT_DIR)/%.o: %.s
+	mkdir -p $(dir $@)
+	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
+
+$(OUT_DIR)/%.o: %.c
+	mkdir -p $(dir $@)
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
 qemu: main.bin $(QEMU_STM32)
@@ -143,7 +155,7 @@ check: unit_test.c unit_test.h
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
-	rm -f *.elf *.bin *.list gdb.txt $(OBJS) $(DEPS)
+	rm -fr *.elf *.bin *.list gdb.txt $(OUT_DIR)
 	make -C unit_tests clean
 
 -include $(DEPS)
