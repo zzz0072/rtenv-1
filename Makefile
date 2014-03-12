@@ -144,19 +144,19 @@ qemuauto_remote: $(OUT_DIR)/$(TARGET).bin gdbscript
 	$(CROSS_COMPILE)gdb -x gdbscript&
 	sleep 5
 
-check: unit_test.c unit_test.h
+check: src/unit_test.c include/unit_test.h
 	$(MAKE) $(OUT_DIR)/$(TARGET).bin UNIT_TEST=-DUNIT_TEST
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
 		-serial stdio \
 		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null >/dev/null &
 	# Dirty hack to force running tests every time
-	make -C unit_tests clean
-	make -C unit_tests CROSS_COMPILE=$(CROSS_COMPILE)
+	make -C tests clean
+	make -C tests CROSS_COMPILE=$(CROSS_COMPILE)
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
 	rm -fr gdb.txt $(OUT_DIR)
-	make -C unit_tests clean
+	make -C tests clean
 
 -include $(DEPS)
