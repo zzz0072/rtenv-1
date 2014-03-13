@@ -85,11 +85,11 @@ $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
 
 $(OUT_DIR)/%.o: %.s
 	@mkdir -p $(dir $@)
-	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
+	$(CROSS_COMPILE)gcc -c $(CFLAGS) $< -o $@
 
 $(OUT_DIR)/%.o: %.c
 	@mkdir -p $(dir $@)
-	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
+	$(CROSS_COMPILE)gcc -c $(CFLAGS) $< -o $@
 
 check: src/unit_test.c include/unit_test.h
 	$(MAKE) $(OUT_DIR)/$(TARGET).bin UNIT_TEST=-DUNIT_TEST
