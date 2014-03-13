@@ -84,11 +84,11 @@ $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
 	$(CROSS_COMPILE)objdump -S $(OUT_DIR)/$(TARGET).elf > $(OUT_DIR)/$(TARGET).list
 
 $(OUT_DIR)/%.o: %.s
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
 $(OUT_DIR)/%.o: %.c
-	mkdir -p $(dir $@)
+	@mkdir -p $(dir $@)
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
 check: src/unit_test.c include/unit_test.h
@@ -97,7 +97,7 @@ check: src/unit_test.c include/unit_test.h
 		-gdb tcp::3333 -S \
 		-serial stdio \
 		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null >/dev/null &
-	make unit_test
+	- make unit_test
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
