@@ -1,4 +1,4 @@
-source qemudbg_init.in
+source tests/qemudbg_init.in
 set logging on
 set num_to_string(0, 10, g_typed_cmds[0], 0)
 if !strcmp(g_typed_cmds[0], "0")

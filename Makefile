@@ -73,6 +73,11 @@ INCS =  -Iinclude \
 		-I$(CMSIS_LIB)/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc \
 
+# Include build rules
+MK_RULES=$(shell ls mk/*.mk)
+
+include $(MK_RULES)
+
 #----------------------------------------------------------------------------------
 $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
 	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
@@ -123,13 +128,10 @@ check: src/unit_test.c include/unit_test.h
 		-gdb tcp::3333 -S \
 		-serial stdio \
 		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null >/dev/null &
-	# Dirty hack to force running tests every time
-	make -C tests clean
-	make -C tests CROSS_COMPILE=$(CROSS_COMPILE)
+	make unit_test
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
-	rm -fr gdb.txt $(OUT_DIR)
-	make -C tests clean
+	rm -fr $(OUT_DIR)
 
 -include $(DEPS)

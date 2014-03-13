@@ -1,4 +1,4 @@
-source qemudbg_init.in
+source tests/qemudbg_init.in
 set logging on
 set strcpy(g_typed_cmds[0], "ps")
 if g_typed_cmds[0][0]=='p' && g_typed_cmds[0][1]=='s'

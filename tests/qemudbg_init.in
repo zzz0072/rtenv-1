@@ -1,5 +1,5 @@
 # TODO: remove hard code
-file ../build/rtenv.elf 
+file build/rtenv.elf
 target remote :3333
 b unit_test.c:4
 define show_environment_variables
