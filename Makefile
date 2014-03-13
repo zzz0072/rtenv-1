@@ -34,7 +34,6 @@ STM32_SRCS = \
 # rtenv sources
 RTENV_SRCS = $(shell ls src/*.c src/*.s)
 
-
 SRCS= \
 	$(CMSIS_SRCS) \
 	$(STM32_SRCS) \
@@ -52,9 +51,9 @@ OBJS   = $(patsubst %.s, %.o, $(C_OBJS)) # also *.s to *.o files
 
 OUT_OBJS = $(addprefix $(OUT_DIR)/, $(OBJS))
 
-DEPS   = ${OUT_OBJS:.o=.d}
+DEPS   = $(OUT_OBJS:.o=.d)
 
-# Basic configurations
+# Compilation flags
 DEBUG_FLAGS = -g3 $(UNIT_TEST)
 
 CFLAGS += $(DEBUG_FLAGS)
@@ -71,7 +70,7 @@ INCS =  -Iinclude \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/CoreSupport \
 		-I$(LIBDIR)/libraries/CMSIS/CM3/DeviceSupport/ST/STM32F10x \
 		-I$(CMSIS_LIB)/CM3/DeviceSupport/ST/STM32F10x \
-		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc \
+		-I$(LIBDIR)/libraries/STM32F10x_StdPeriph_Driver/inc
 
 # Include build rules
 MK_RULES=$(shell ls mk/*.mk)
