@@ -76,8 +76,6 @@ INCS =  -Iinclude \
 # Include build rules
 MK_RULES=$(shell ls mk/*.mk)
 
-include $(MK_RULES)
-
 #----------------------------------------------------------------------------------
 $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
 	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
@@ -135,3 +133,4 @@ clean:
 	rm -fr $(OUT_DIR)
 
 -include $(DEPS)
+include $(MK_RULES)
