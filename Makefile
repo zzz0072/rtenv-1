@@ -91,35 +91,6 @@ $(OUT_DIR)/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CROSS_COMPILE)gcc -c $(CFLAGS) $^ -o $@
 
-qemu: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null
-
-qemudbg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-gdb tcp::3333 -S \
-		-kernel $(OUT_DIR)/$(TARGET).bin
-
-qemu_remote: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 -kernel $(OUT_DIR)/$(TARGET).bin -vnc :1
-
-qemudbg_remote: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-gdb tcp::3333 -S \
-		-kernel $(OUT_DIR)/$(TARGET).bin \
-		-vnc :1
-
-qemu_remote_bg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-kernel $(OUT_DIR)/$(TARGET).bin \
-		-vnc :1 &
-
-qemudbg_remote_bg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
-	$(QEMU_STM32) -M stm32-p103 \
-		-gdb tcp::3333 -S \
-		-kernel $(OUT_DIR)/$(TARGET).bin \
-		-vnc :1 &
-
 check: src/unit_test.c include/unit_test.h
 	$(MAKE) $(OUT_DIR)/$(TARGET).bin UNIT_TEST=-DUNIT_TEST
 	$(QEMU_STM32) -M stm32-p103 \
