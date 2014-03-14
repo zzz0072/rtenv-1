@@ -1,12 +1,13 @@
 # source/taget
 MKFS_SRC=$(TOOLS_DIR)/mkrootfs.c
-MKFS_TARGET=$(OUT_DIR)/$(TOOLS_DIR)/mkrootfs
+MKFS_HOST=$(OUT_DIR)/$(TOOLS_DIR)/mkrootfs
 
 # flags
 MKFS_FLAGS=-g -Wall -Werror
 
-mkrootfs: $(MKFS_TARGET)
+mkrootfs: $(MKFS_HOST)
 
-$(MKFS_TARGET): $(MKFS_SRC)
+# host tool to pack files/directory to a binary file
+$(MKFS_HOST): $(MKFS_SRC)
 	@mkdir -p $(dir $@)
 	$(HOST-CC) $(MKFS_FLAGS) -o $@ $^
