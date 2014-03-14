@@ -8,7 +8,7 @@ TARGET=rtenv
 
 OUT_DIR=build
 TOOLS_DIR=tools
-GENERATED_ROOTFS=$(OUT_DIR)/rootfs
+ROOTFS_DIR=rootfs
 
 # QEMU PATH
 QEMU_STM32 ?= ../qemu_stm32/arm-softmmu/qemu-system-arm
@@ -105,6 +105,9 @@ check: src/unit_test.c include/unit_test.h
 
 clean:
 	rm -fr $(OUT_DIR)
+
+distclean: clean
+	rm -fr $(ROOTFS_DIR)
 
 -include $(DEPS)
 include $(MK_RULES)
