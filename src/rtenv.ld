@@ -11,8 +11,8 @@ SECTIONS
 	.text :
 	{
 		KEEP(*(.isr_vector))
- 		*(.text)
- 		*(.text.*)
+		*(.text)
+		*(.text.*)
 		*(.rodata)
 		*(.rodata*)
 		_sidata = .;
@@ -32,5 +32,5 @@ SECTIONS
 		_ebss = .;
 	} >RAM
 
-    _estack = ORIGIN(RAM) + LENGTH(RAM);
+	_estack = ORIGIN(RAM) + LENGTH(RAM);
  }
