@@ -9,7 +9,7 @@
 
 
 #define MAX_ALLOCS (128)   /* Max allocate number. Random pick, no reason */
-#define POOL_SIZE (1024)   /* Bisection to tried max is 1812. Do not know why.
+#define POOL_SIZE (1024*48)   /* Bisection to tried max is 1812. Do not know why.
                               However, 1812 caused system to hang. Maybe due
                               to stack will full. So, adjust to 1024 */
 /* struct to record usage */
