@@ -6,7 +6,9 @@ ROOTFS_IMAGE=$(OUT_DIR)/rootfs.img
 # flags
 MKFS_FLAGS=-g -Wall -Werror
 
-mkrootfs: $(ROOTFS_IMAGE)
+$(ROOTFS_OBJ): $(ROOTFS_IMAGE)
+	@$(CROSS_COMPILE)objcopy -I binary -O elf32-littlearm -B arm \
+		--prefix-sections '.rom' $< $@
 
 $(ROOTFS_IMAGE): $(MKFS_HOST) rootfs_dir
 	$(MKFS_HOST) -d $(ROOTFS_DIR) -o $@

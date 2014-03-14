@@ -55,6 +55,8 @@ OBJS   = $(patsubst %.s, %.o, $(C_OBJS)) # also *.s to *.o files
 
 OUT_OBJS = $(addprefix $(OUT_DIR)/, $(OBJS))
 
+ROOTFS_OBJ = $(OUT_DIR)/rootfs.o
+
 DEPS   = $(OUT_OBJS:.o=.d)
 
 # Compilation flags
@@ -80,9 +82,9 @@ INCS =  -Iinclude \
 MK_RULES=$(shell ls mk/*.mk)
 
 #----------------------------------------------------------------------------------
-$(OUT_DIR)/$(TARGET).bin: mkrootfs $(OUT_OBJS)
+$(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS) $(ROOTFS_OBJ)
 	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
-		$(CFLAGS) $(OUT_OBJS) -o $(OUT_DIR)/$(TARGET).elf
+		$(CFLAGS) $(OUT_OBJS) $(ROOTFS_OBJ) -o $(OUT_DIR)/$(TARGET).elf
 	$(CROSS_COMPILE)objcopy -Obinary $(OUT_DIR)/$(TARGET).elf $@
 	$(CROSS_COMPILE)objdump -S $(OUT_DIR)/$(TARGET).elf > $(OUT_DIR)/$(TARGET).list
 
