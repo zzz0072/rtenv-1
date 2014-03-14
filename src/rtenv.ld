@@ -23,6 +23,7 @@ SECTIONS
     {
 		_sdata = .;
 		*(.data)		/* Initialized data */
+		*(.data*)
 		_edata = .;
 	} >RAM
 
