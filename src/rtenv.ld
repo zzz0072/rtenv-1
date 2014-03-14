@@ -19,7 +19,7 @@ SECTIONS
 	} >FLASH
 
 	/* Initialized data will initially be loaded in FLASH at the end of the .text section. */
-    .data : AT (_sidata) 
+    .data : AT (_sidata)
     {
 		_sdata = .;
 		*(.data)		/* Initialized data */
@@ -31,6 +31,6 @@ SECTIONS
 		*(.bss)         /* Zero-filled run time allocate data memory */
 		_ebss = .;
 	} >RAM
-    
+
     _estack = ORIGIN(RAM) + LENGTH(RAM);
- }  
+ }
