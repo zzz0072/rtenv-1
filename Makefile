@@ -1,10 +1,14 @@
 # Toolchain configuration
 CROSS_COMPILE ?= arm-none-eabi-
 CC := $(CROSS_COMPILE)gcc
+HOST-CC := gcc
 
 # TARGET settings
-OUT_DIR=build
 TARGET=rtenv
+
+OUT_DIR=build
+TOOLS_DIR=tools
+GENERATED_ROOTFS=$(OUT_DIR)/rootfs
 
 # QEMU PATH
 QEMU_STM32 ?= ../qemu_stm32/arm-softmmu/qemu-system-arm
@@ -76,7 +80,7 @@ INCS =  -Iinclude \
 MK_RULES=$(shell ls mk/*.mk)
 
 #----------------------------------------------------------------------------------
-$(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS)
+$(OUT_DIR)/$(TARGET).bin: mkrootfs $(OUT_OBJS)
 	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
 		$(CFLAGS) $(OUT_OBJS) -o $(OUT_DIR)/$(TARGET).elf
 	$(CROSS_COMPILE)objcopy -Obinary $(OUT_DIR)/$(TARGET).elf $@
