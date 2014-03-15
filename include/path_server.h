@@ -2,10 +2,8 @@
 #define PATH_SERVER_H_20140220
 #include <stddef.h> /* size_t */
 #include "task.h"
+#include "kconfig.h"
 
-#define PIPE_BUF   64 /* Size of largest atomic pipe message */
-#define PATH_MAX   32 /* Longest absolute path */
-#define PIPE_LIMIT (TASK_LIMIT * 2)
 
 #define PATHSERVER_FD (TASK_LIMIT + 3)
 /* File descriptor of pipe to pathserver */

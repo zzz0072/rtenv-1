@@ -1,11 +1,7 @@
 #ifndef TASK_H_20140220
 #define TASK_H_20140220
 
-#define STACK_SIZE 512 /* Size of task stacks in words */
-#define TASK_LIMIT 8  /* Max number of tasks we can handle */
-
-#define PRIORITY_DEFAULT 20
-#define PRIORITY_LIMIT (PRIORITY_DEFAULT * 2 - 1)
+#include "kconfig.h"
 
 #define TASK_READY      0
 #define TASK_WAIT_READ  1
