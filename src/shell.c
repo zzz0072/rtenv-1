@@ -41,8 +41,8 @@ typedef struct {
 /************************
  * Global variables
 *************************/
-extern size_t task_count;
-extern struct task_control_block tasks[TASK_LIMIT];
+extern size_t g_task_count;
+extern struct task_control_block g_tasks[TASK_LIMIT];
 
 static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
@@ -425,17 +425,17 @@ void cmd_ps(int argc, char* argv[])
 
     printf("%s\n\r", ps_message);
 
-    for (task_i = 0; task_i < task_count; task_i++) {
+    for (task_i = 0; task_i < g_task_count; task_i++) {
         char task_info_tid[2];
         char task_info_status[2];
         char task_info_priority[MAX_ITOA_CHARS];
 
-        task_info_tid[0]='0'+tasks[task_i].tid;
+        task_info_tid[0]='0'+g_tasks[task_i].tid;
         task_info_tid[1]='\0';
-        task_info_status[0]='0'+tasks[task_i].status;
+        task_info_status[0]='0'+g_tasks[task_i].status;
         task_info_status[1]='\0';
 
-        str_to_output = itoa(tasks[task_i].priority, task_info_priority);
+        str_to_output = itoa(g_tasks[task_i].priority, task_info_priority);
 
         printf("%s\t%s\t%s\n\r", task_info_tid, task_info_status, str_to_output);
     }

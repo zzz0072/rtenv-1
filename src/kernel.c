@@ -16,9 +16,10 @@
 #include "unit_test.h"
 #endif
 
-/*Global Variables*/
-size_t task_count = 0;
-struct task_control_block tasks[TASK_LIMIT];
+/* Global variables */
+extern size_t g_task_count;
+extern struct task_control_block g_tasks[TASK_LIMIT];
+
 
 void first()
 {
@@ -52,10 +53,10 @@ int main()
     init_rs232();
     __enable_irq();
 
-    tasks[task_count].stack = (void*)init_task(stacks[task_count], &first);
-    tasks[task_count].tid = 0;
-    tasks[task_count].priority = PRIORITY_DEFAULT;
-    task_count++;
+    g_tasks[g_task_count].stack = (void*)init_task(stacks[g_task_count], &first);
+    g_tasks[g_task_count].tid = 0;
+    g_tasks[g_task_count].priority = PRIORITY_DEFAULT;
+    g_task_count++;
 
     /* Initialize all pipes */
     for (i = 0; i < PIPE_LIMIT; i++)
@@ -73,96 +74,96 @@ int main()
     init_mpool();
 
     while (1) {
-        tasks[current_task].stack = activate(tasks[current_task].stack);
-        tasks[current_task].status = TASK_READY;
+        g_tasks[current_task].stack = activate(g_tasks[current_task].stack);
+        g_tasks[current_task].status = TASK_READY;
         timeup = 0;
 
-        switch (tasks[current_task].stack->r7) {
+        switch (g_tasks[current_task].stack->r7) {
         case SYS_CALL_FORK: /* fork */
-            if (task_count == TASK_LIMIT) {
+            if (g_task_count == TASK_LIMIT) {
                 /* Cannot create a new task, return error */
-                tasks[current_task].stack->r0 = -1;
+                g_tasks[current_task].stack->r0 = -1;
             }
             else {
                 /* Compute how much of the stack is used */
                 size_t used = stacks[current_task] + STACK_SIZE
-                          - (unsigned int*)tasks[current_task].stack;
+                          - (unsigned int*)g_tasks[current_task].stack;
                 /* New stack is END - used */
-                tasks[task_count].stack = (void*)(stacks[task_count] + STACK_SIZE - used);
+                g_tasks[g_task_count].stack = (void*)(stacks[g_task_count] + STACK_SIZE - used);
                 /* Copy only the used part of the stack */
-                memcpy(tasks[task_count].stack, tasks[current_task].stack,
+                memcpy(g_tasks[g_task_count].stack, g_tasks[current_task].stack,
                        used * sizeof(unsigned int));
                 /* Set PID */
-                tasks[task_count].tid = task_count;
+                g_tasks[g_task_count].tid = g_task_count;
                 /* Set priority, inherited from forked task */
-                tasks[task_count].priority = tasks[current_task].priority;
+                g_tasks[g_task_count].priority = g_tasks[current_task].priority;
                 /* Set return values in each process */
-                tasks[current_task].stack->r0 = task_count;
-                tasks[task_count].stack->r0 = 0;
-                tasks[task_count].prev = NULL;
-                tasks[task_count].next = NULL;
-                task_push(&ready_list[tasks[task_count].priority], &tasks[task_count]);
+                g_tasks[current_task].stack->r0 = g_task_count;
+                g_tasks[g_task_count].stack->r0 = 0;
+                g_tasks[g_task_count].prev = NULL;
+                g_tasks[g_task_count].next = NULL;
+                task_push(&ready_list[g_tasks[g_task_count].priority], &g_tasks[g_task_count]);
                 /* There is now one more task */
-                task_count++;
+                g_task_count++;
             }
             break;
         case SYS_CALL_GETTID: /* gettid */
-            tasks[current_task].stack->r0 = current_task;
+            g_tasks[current_task].stack->r0 = current_task;
             break;
         case SYS_CALL_WRITE: /* write */
-            _write(&tasks[current_task], tasks, task_count, pipes);
+            _write(&g_tasks[current_task], g_tasks, g_task_count, pipes);
             break;
         case SYS_CALL_READ: /* read */
-            _read(&tasks[current_task], tasks, task_count, pipes);
+            _read(&g_tasks[current_task], g_tasks, g_task_count, pipes);
             break;
         case SYS_CALL_WAIT_INTR: /* interrupt_wait */
             /* Enable interrupt */
-            NVIC_EnableIRQ(tasks[current_task].stack->r0);
+            NVIC_EnableIRQ(g_tasks[current_task].stack->r0);
             /* Block task waiting for interrupt to happen */
-            tasks[current_task].status = TASK_WAIT_INTR;
+            g_tasks[current_task].status = TASK_WAIT_INTR;
             break;
         case SYS_CALL_GETPRIORITY: /* getpriority */
             {
-                int who = tasks[current_task].stack->r0;
-                if (who > 0 && who < (int)task_count)
-                    tasks[current_task].stack->r0 = tasks[who].priority;
+                int who = g_tasks[current_task].stack->r0;
+                if (who > 0 && who < (int)g_task_count)
+                    g_tasks[current_task].stack->r0 = g_tasks[who].priority;
                 else if (who == 0)
-                    tasks[current_task].stack->r0 = tasks[current_task].priority;
+                    g_tasks[current_task].stack->r0 = g_tasks[current_task].priority;
                 else
-                    tasks[current_task].stack->r0 = -1;
+                    g_tasks[current_task].stack->r0 = -1;
             } break;
         case SYS_CALL_SETPRIORITY: /* setpriority */
             {
-                int who = tasks[current_task].stack->r0;
-                int value = tasks[current_task].stack->r1;
+                int who = g_tasks[current_task].stack->r0;
+                int value = g_tasks[current_task].stack->r1;
                 value = (value < 0) ? 0 : ((value > PRIORITY_LIMIT) ? PRIORITY_LIMIT : value);
-                if (who > 0 && who < (int)task_count)
-                    tasks[who].priority = value;
+                if (who > 0 && who < (int)g_task_count)
+                    g_tasks[who].priority = value;
                 else if (who == 0)
-                    tasks[current_task].priority = value;
+                    g_tasks[current_task].priority = value;
                 else {
-                    tasks[current_task].stack->r0 = -1;
+                    g_tasks[current_task].stack->r0 = -1;
                     break;
                 }
-                tasks[current_task].stack->r0 = 0;
+                g_tasks[current_task].stack->r0 = 0;
             } break;
         case SYS_CALL_MK_NODE: /* mknod */
-            if (tasks[current_task].stack->r0 < PIPE_LIMIT)
-                tasks[current_task].stack->r0 =
-                    _mknod(&pipes[tasks[current_task].stack->r0],
-                           tasks[current_task].stack->r2);
+            if (g_tasks[current_task].stack->r0 < PIPE_LIMIT)
+                g_tasks[current_task].stack->r0 =
+                    _mknod(&pipes[g_tasks[current_task].stack->r0],
+                           g_tasks[current_task].stack->r2);
             else
-                tasks[current_task].stack->r0 = -1;
+                g_tasks[current_task].stack->r0 = -1;
             break;
         case SYS_CALL_SLEEP: /* sleep */
-            if (tasks[current_task].stack->r0 != 0) {
-                tasks[current_task].stack->r0 += tick_count;
-                tasks[current_task].status = TASK_WAIT_TIME;
+            if (g_tasks[current_task].stack->r0 != 0) {
+                g_tasks[current_task].stack->r0 += tick_count;
+                g_tasks[current_task].status = TASK_WAIT_TIME;
             }
             break;
         default: /* Catch all interrupts */
-            if ((int)tasks[current_task].stack->r7 < 0) {
-                int intr = -tasks[current_task].stack->r7 - 16;
+            if ((int)g_tasks[current_task].stack->r7 < 0) {
+                int intr = -g_tasks[current_task].stack->r7 - 16;
 
                 if (intr == SysTick_IRQn) {
                     /* Never disable timer. We need it for pre-emption */
@@ -174,10 +175,10 @@ int main()
                     NVIC_DisableIRQ(intr);
                 }
                 /* Unblock any waiting tasks */
-                for (i = 0; i < task_count; i++)
-                    if ((tasks[i].status == TASK_WAIT_INTR && tasks[i].stack->r0 == intr) ||
-                        (tasks[i].status == TASK_WAIT_TIME && tasks[i].stack->r0 == tick_count))
-                        tasks[i].status = TASK_READY;
+                for (i = 0; i < g_task_count; i++)
+                    if ((g_tasks[i].status == TASK_WAIT_INTR && g_tasks[i].stack->r0 == intr) ||
+                        (g_tasks[i].status == TASK_WAIT_TIME && g_tasks[i].stack->r0 == tick_count))
+                        g_tasks[i].status = TASK_READY;
             }
         }
 
@@ -189,16 +190,16 @@ int main()
             task = next;
         }
         /* Select next TASK_READY task */
-        for (i = 0; i < (size_t)tasks[current_task].priority && ready_list[i] == NULL; i++);
-        if (tasks[current_task].status == TASK_READY) {
-            if (!timeup && i == (size_t)tasks[current_task].priority)
+        for (i = 0; i < (size_t)g_tasks[current_task].priority && ready_list[i] == NULL; i++);
+        if (g_tasks[current_task].status == TASK_READY) {
+            if (!timeup && i == (size_t)g_tasks[current_task].priority)
                 /* Current task has highest priority and remains execution time */
                 continue;
             else
-                task_push(&ready_list[tasks[current_task].priority], &tasks[current_task]);
+                task_push(&ready_list[g_tasks[current_task].priority], &g_tasks[current_task]);
         }
         else {
-            task_push(&wait_list, &tasks[current_task]);
+            task_push(&wait_list, &g_tasks[current_task]);
         }
         while (ready_list[i] == NULL)
             i++;
