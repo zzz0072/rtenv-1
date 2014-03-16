@@ -1,4 +1,6 @@
 build
 rootfs
+cscope.out
+tags
 *~
 .*.swp
