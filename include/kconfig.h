@@ -7,7 +7,7 @@
 #define PIPE_BUF   64 /* Size of largest atomic pipe message */
 #define PATH_MAX   32 /* Longest absolute path */
 #define PATHSERVER_FD (TASK_LIMIT + 3) 
-	/* File descriptor of pipe to pathserver */
+                      /* File descriptor of pipe to pathserver */
 #define FREG_LIMIT 16 /* Other types file limit */
 #define FILE_LIMIT (PIPE_LIMIT + FREG_LIMIT)
 #define MEM_LIMIT (2048)

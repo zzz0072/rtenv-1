@@ -11,8 +11,8 @@
 
 #define path_write_data(dst, src, len, pos) \
 { \
-	memcpy(dst + pos, src, len); \
-	pos += len; \
+    memcpy(dst + pos, src, len); \
+    pos += len; \
 }
 
 void pathserver();

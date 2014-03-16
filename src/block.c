@@ -11,12 +11,12 @@ struct block_response {
 };
 
 static struct file_operations block_ops = {
-	.readable = block_readable,
-	.writable = block_writable,
-	.read = block_read,
-	.write = block_write,
-	.lseekable = block_lseekable,
-	.lseek = block_lseek,
+    .readable = block_readable,
+    .writable = block_writable,
+    .read = block_read,
+    .write = block_write,
+    .lseekable = block_lseekable,
+    .lseek = block_lseek,
 };
 
 
@@ -74,7 +74,7 @@ int block_driver_write (struct block *block, struct file_request *request,
     }
     block->transfer_len = len;
     block->buzy = 0;
-	event_monitor_release(monitor, block->event);
+    event_monitor_release(monitor, block->event);
     return len;
 }
 
@@ -83,7 +83,7 @@ int block_driver_lseek (struct block *block, struct file_request *request,
 {
     block->transfer_len = request->size;
     block->buzy = 0;
-	event_monitor_release(monitor, block->event);
+    event_monitor_release(monitor, block->event);
     return request->size;
 }
 
@@ -130,7 +130,7 @@ int block_request_readable (struct block *block, struct file_request *request,
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, block->event, task);
+    event_monitor_block(monitor, block->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -182,7 +182,7 @@ int block_request_writable (struct block *block, struct file_request *request,
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, block->event, task);
+    event_monitor_block(monitor, block->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -236,7 +236,7 @@ int block_request_lseekable (struct block *block, struct file_request *request,
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, block->event, task);
+    event_monitor_block(monitor, block->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -308,7 +308,7 @@ int block_init(int fd, int driver_tid, struct file *files[],
     block->request_tid = 0;
     block->buzy = 0;
     block->pos = 0;
-	block->file.ops = &block_ops;
+    block->file.ops = &block_ops;
     block->event = event_monitor_find_free(monitor);
     files[fd] = &block->file;
 

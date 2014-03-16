@@ -11,12 +11,12 @@ struct regfile_response {
 };
 
 static struct file_operations regfile_ops = {
-	.readable = regfile_readable,
-	.writable = regfile_writable,
-	.read = regfile_read,
-	.write = regfile_write,
-	.lseekable = regfile_lseekable,
-	.lseek = regfile_lseek,
+    .readable = regfile_readable,
+    .writable = regfile_writable,
+    .read = regfile_read,
+    .write = regfile_write,
+    .lseekable = regfile_lseekable,
+    .lseek = regfile_lseek,
 };
 
 
@@ -73,7 +73,7 @@ int regfile_driver_write (struct regfile *regfile, struct file_request *request,
     }
     regfile->transfer_len = len;
     regfile->buzy = 0;
-	event_monitor_release(monitor, regfile->event);
+    event_monitor_release(monitor, regfile->event);
     return len;
 }
 
@@ -82,7 +82,7 @@ int regfile_driver_lseek (struct regfile *regfile, struct file_request *request,
 {
     regfile->transfer_len = request->size;
     regfile->buzy = 0;
-	event_monitor_release(monitor, regfile->event);
+    event_monitor_release(monitor, regfile->event);
     return request->size;
 }
 
@@ -129,7 +129,7 @@ int regfile_request_readable (struct regfile *regfile, struct file_request *requ
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, regfile->event, task);
+    event_monitor_block(monitor, regfile->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -181,7 +181,7 @@ int regfile_request_writable (struct regfile *regfile, struct file_request *requ
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, regfile->event, task);
+    event_monitor_block(monitor, regfile->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -235,7 +235,7 @@ int regfile_request_lseekable (struct regfile *regfile, struct file_request *req
         return FILE_ACCESS_ACCEPT;
     }
 
-	event_monitor_block(monitor, regfile->event, task);
+    event_monitor_block(monitor, regfile->event, task);
     return FILE_ACCESS_BLOCK;
 }
 
@@ -307,7 +307,7 @@ int regfile_init(int fd, int driver_tid, struct file *files[],
     regfile->request_tid = 0;
     regfile->buzy = 0;
     regfile->pos = 0;
-	regfile->file.ops = &regfile_ops;
+    regfile->file.ops = &regfile_ops;
     regfile->event = event_monitor_find_free(monitor);
     files[fd] = &regfile->file;
 
