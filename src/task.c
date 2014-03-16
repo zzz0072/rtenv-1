@@ -1,6 +1,4 @@
-#include <task.h>
-#include <rt_string.h>
-#include <syscall.h>
+#include "task.h"
 
 unsigned int *init_task(unsigned int *stack, void (*start)())
 {
@@ -8,5 +6,3 @@ unsigned int *init_task(unsigned int *stack, void (*start)())
     stack[8] = (unsigned int)start;
     return stack;
 }
-
-
