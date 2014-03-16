@@ -68,9 +68,9 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
     int current_metadata_offset = next_metadata_offset;
 
     struct file_metadata_t file_metadata;
-    file_metadata.parent = parent_metadata_offset;
-    file_metadata.prev = 0;
-    file_metadata.next = 0;
+    file_metadata.parent_pos = parent_metadata_offset;
+    file_metadata.prev_pos = 0;
+    file_metadata.next_pos = 0;
 
     /* Scan entries */
     while ((direntry = readdir(dirfile))) {
@@ -80,7 +80,7 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
 
         current_metadata_offset = next_metadata_offset;
 
-        file_metadata.prev = prev_metadata_offset;
+        file_metadata.prev_pos = prev_metadata_offset;
         strncpy((void*)file_metadata.name, direntry->d_name, PATH_LEN);
 
         strcpy(fullpath + fullpath_len, direntry->d_name);
@@ -102,7 +102,7 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
             next_metadata_offset = procfile(direntry->d_name, fullpath, outfile);
         }
 
-        file_metadata.next = next_metadata_offset;
+        file_metadata.next_pos = next_metadata_offset;
         file_metadata.len = next_metadata_offset -
                              (current_metadata_offset + sizeof(file_metadata));
 
@@ -117,8 +117,8 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
     }
 
     /* Clear next of last file_metadata */
-    if (file_metadata.next != 0) {
-        file_metadata.next = 0;
+    if (file_metadata.next_pos != 0) {
+        file_metadata.next_pos = 0;
         fwrite_off(&file_metadata,
                    sizeof(file_metadata),
                    1,
@@ -182,9 +182,9 @@ int main (int argc, char *argv[])
     fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, 0);
     size_t end = procdir(dirname, fullpath, outfile);
 
-    file_metadata.parent = 0;
-    file_metadata.prev = 0;
-    file_metadata.next = 0;
+    file_metadata.parent_pos = 0;
+    file_metadata.prev_pos = 0;
+    file_metadata.next_pos = 0;
     file_metadata.isdir = 1;
     file_metadata.len = end - sizeof(file_metadata);
     fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, 0);

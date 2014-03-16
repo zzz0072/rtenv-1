@@ -14,29 +14,29 @@ struct romfs_file {
     size_t len;
 };
 
-int romfs_open_recur(int device, char *path, int this, struct file_metadata_t *file_metadata)
+int romfs_open_recur(int device, char *path, int offset, struct file_metadata_t *file_metadata)
 {
     if (file_metadata->isdir) {
         /* Iterate through children */
-        int pos = this + sizeof(*file_metadata);
-        while (pos) {
+        int curr_pos = offset + sizeof(*file_metadata);
+        while (curr_pos) {
             /* Get file_metadata */
-            lseek(device, pos, SEEK_SET);
+            lseek(device, curr_pos, SEEK_SET);
             read(device, file_metadata, sizeof(*file_metadata));
 
             /* Compare path */
             int len = strlen((char *)file_metadata->name);
             if (strncmp((char *)file_metadata->name, path, len) == 0) {
                 if (path[len] == '/') { /* Match directory */
-                    return romfs_open_recur(device, path + len + 1, pos, file_metadata);
+                    return romfs_open_recur(device, path + len + 1, curr_pos, file_metadata);
                 }
                 else if (path[len] == 0) { /* Match file */
-                    return pos;
+                    return curr_pos;
                 }
             }
 
             /* Next file_metadata */
-            pos = file_metadata->next;
+            curr_pos = file_metadata->next_pos;
         }
     }
 
