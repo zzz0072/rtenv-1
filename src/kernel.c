@@ -33,15 +33,15 @@ void first()
     setpriority(0, 0);
 
     if (!fork()) setpriority(0, 0), pathserver();
-//    if (!fork()) setpriority(0, 0), romdev_driver();
-//    if (!fork()) setpriority(0, 0), romfs_server();
     if (!fork()) setpriority(0, 0), serialout(USART2, USART2_IRQn);
     if (!fork()) setpriority(0, 0), serialin(USART2, USART2_IRQn);
+    if (!fork()) setpriority(0, 0), romdev_driver();
+    if (!fork()) setpriority(0, 0), romfs_server();
     if (!fork()) rs232_xmit_msg_task();
     if (!fork()) setpriority(0, PRIORITY_DEFAULT - 10), shell_task();
 
     setpriority(0, PRIORITY_LIMIT);
-   // mount("/dev/rom0", "/", ROMFS_TYPE, 0);
+    mount("/dev/rom0", "/", ROMFS_TYPE, 0);
     while(1);
 }
 
