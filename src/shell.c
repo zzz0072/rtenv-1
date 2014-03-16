@@ -24,6 +24,7 @@ void cmd_help(int argc, char *argv[]);
 void cmd_ps(int argc, char *argv[]);
 void cmd_man(int argc, char *argv[]);
 void cmd_history(int argc, char *argv[]);
+void cmd_cat(int argc, char *argv[]);
 
 /**************************
  * Internal data structures
@@ -55,6 +56,7 @@ static const hcmd_entry g_available_cmds[] = {
     ADD_CMD(help,    "List avaialbe commands"),
     ADD_CMD(man,     "manaual for commands"),
     ADD_CMD(ps,      "List task information"),
+    ADD_CMD(cat,     "dump file to serial out"),
 };
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
@@ -401,10 +403,59 @@ static char *readline(char *prompt)
     return read_buf;
 }
 
+static void cat_buf(const char *buf, int buf_size)
+{
+    int i = 0;
+
+    if (buf == 0 || buf_size <= 0) {
+        return;
+    }
+
+    /* Bad implementation */
+    for (i = 0; i < buf_size; i++) {
+        printf("%c", buf[i]);
+        if (buf[i] == '\n') {
+            printf("\r");
+        }
+    }
+}
 
 /************************
  * Command handlers
 *************************/
+void cmd_cat(int argc, char *argv[])
+{
+    int rval = CMDBUF_SIZE;
+    int fd = 0;
+    char buf[CMDBUF_SIZE];
+
+    /* Current only one file*/
+    if (argc != 2) {
+        printf("Usage: %s filename\n\r", argv[0]);
+        return;
+    }
+
+    /* Open file */
+    fd = open(argv[1], 0);
+    if (fd == -1) {
+        printf("Open file %s failed\n\r", argv[1]);
+        return;
+    }
+
+    printf("\n\r");
+    /* Read file */
+    while (rval == CMDBUF_SIZE) {
+        rval = read(fd, buf, CMDBUF_SIZE);
+        if (rval == -1) {
+            printf("Read file %s failed\n\r", argv[1]);
+            return;
+        }
+
+        cat_buf(buf, rval);
+    }
+    printf("\n\r");
+}
+
 /* export */
 void cmd_export(int argc, char *argv[])
 {
