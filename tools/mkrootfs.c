@@ -61,7 +61,7 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
     int parent_metadata_offset = ftell(outfile) - sizeof(struct file_metadata_t);
     int prev_metadata_offset = 0; /* prev = 0 means no prev */
     int next_metadata_offset = ftell(outfile);
-    int this_metadata_offset = next_metadata_offset;
+    int current_metadata_offset = next_metadata_offset;
 
     struct file_metadata_t file_metadata;
     file_metadata.parent = parent_metadata_offset;
@@ -74,15 +74,15 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         if (*direntry->d_name == '.')
             continue;
 
-        this_metadata_offset = next_metadata_offset;
+        current_metadata_offset = next_metadata_offset;
 
         file_metadata.prev = prev_metadata_offset;
         strncpy((void*)file_metadata.name, direntry->d_name, PATH_LEN);
 
         strcpy(fullpath + fullpath_len, direntry->d_name);
 
-        /* Reservion for this file_metadata */
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
+        /* Reservion for current file_metadata */
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
 
         /* Process file_metadata */
         if (direntry->d_type == DT_DIR) {
@@ -95,18 +95,18 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         }
 
         file_metadata.next = next_metadata_offset;
-        file_metadata.len = next_metadata_offset - (this_metadata_offset + sizeof(file_metadata));
+        file_metadata.len = next_metadata_offset - (current_metadata_offset + sizeof(file_metadata));
 
         /* Write file_metadata */
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
 
-        prev_metadata_offset = this_metadata_offset;
+        prev_metadata_offset = current_metadata_offset;
     }
 
     /* Clear next of last file_metadata */
     if (file_metadata.next != 0) {
         file_metadata.next = 0;
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
     }
 
 
