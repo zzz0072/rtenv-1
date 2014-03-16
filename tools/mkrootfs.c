@@ -19,7 +19,11 @@
 #define PATH_LEN 31
 #define BUF_SIZE 1024
 
-size_t fwrite_off(const void *ptr, size_t size, size_t nmemb, FILE *stream, off_t off)
+size_t fwrite_off(const void *ptr,
+                  size_t size,
+                  size_t nmemb,
+                  FILE *stream,
+                  off_t off)
 {
     fseek(stream, off, SEEK_SET);
     return fwrite(ptr, size, nmemb, stream);
@@ -82,7 +86,11 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         strcpy(fullpath + fullpath_len, direntry->d_name);
 
         /* Reservion for current file_metadata */
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
+        fwrite_off(&file_metadata,
+                   sizeof(file_metadata),
+                   1,
+                   outfile,
+                   current_metadata_offset);
 
         /* Process file_metadata */
         if (direntry->d_type == DT_DIR) {
@@ -95,10 +103,15 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         }
 
         file_metadata.next = next_metadata_offset;
-        file_metadata.len = next_metadata_offset - (current_metadata_offset + sizeof(file_metadata));
+        file_metadata.len = next_metadata_offset -
+                             (current_metadata_offset + sizeof(file_metadata));
 
         /* Write file_metadata */
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
+        fwrite_off(&file_metadata,
+                   sizeof(file_metadata),
+                   1,
+                   outfile,
+                   current_metadata_offset);
 
         prev_metadata_offset = current_metadata_offset;
     }
@@ -106,7 +119,11 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
     /* Clear next of last file_metadata */
     if (file_metadata.next != 0) {
         file_metadata.next = 0;
-        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, current_metadata_offset);
+        fwrite_off(&file_metadata,
+                   sizeof(file_metadata),
+                   1,
+                   outfile,
+                   current_metadata_offset);
     }
 
 
