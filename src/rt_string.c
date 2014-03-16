@@ -43,13 +43,18 @@ char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_t
     return &buf[i + 1];
 }
 
-void puts(char *s)
+void puts(char *msg)
 {
-    while (*s) {
-        while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
-            /* wait */ ;
-        USART_SendData(USART2, *s);
-        s++;
+    int fdout = mq_open("/tmp/mqueue/out", 0);
+    size_t rval = 0;
+
+    if (!msg) {
+        return;
+    }
+
+    rval = write(fdout, msg, strlen(msg) + 1);
+    if (rval == -1) {
+        return;
     }
 }
 
