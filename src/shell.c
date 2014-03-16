@@ -1,7 +1,7 @@
 #include <stddef.h>
 #include <ctype.h>
 #include <string.h>
-#include "path_server.h"
+#include "file.h"
 #include "rt_string.h"
 #include "syscall.h"
 #include "malloc.h"
@@ -281,6 +281,7 @@ static char *readline(char *prompt)
     char last_char_is_ESC = RT_NO;
     char is_first_arrow_key = RT_YES;
     int curr_char;
+    size_t rval = 0;
     char *read_buf = (char *)malloc(CMDBUF_SIZE);
 
     if (read_buf == 0) {
@@ -294,7 +295,11 @@ static char *readline(char *prompt)
     while(1) {
         /* Receive a byte from the RS232 port (this call will
          * block). */
-        read(fdin, &ch[0], 1);
+        rval = read(fdin, &ch[0], 1);
+        if (rval == -1) {
+            printf("Read errror... \n\r");
+            return 0;
+        }
 
         /* Handle ESC case first */
         if (last_char_is_ESC == RT_YES) {
@@ -305,6 +310,10 @@ static char *readline(char *prompt)
 
                 /* Direction key: ESC[A ~ ESC[D */
                 read(fdin, &ch[0], 1);
+                if (rval == -1) {
+                    printf("Read errror... \n\r");
+                    return 0;
+                }
 
                 /* Repeat previous command? */
                 previous_cmd = retrieve_hist_cmd(ch[0],
@@ -347,6 +356,10 @@ static char *readline(char *prompt)
                  * Page down: ESC[6~ */
                 if (ch[0] >= '1' && ch[0] <= '6') {
                     read(fdin, &ch[0], 1);
+                    if (rval == -1) {
+                        printf("Read errror... \n\r");
+                        return 0;
+                    }
                 }
                 continue;
             }
