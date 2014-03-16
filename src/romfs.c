@@ -1,11 +1,11 @@
 #include "romfs.h"
 
-#include <stdint.h>
 #include "syscall.h"
 #include "path.h"
 #include "fs.h"
 #include "file.h"
 #include "string.h"
+#include "file_metadata.h"
 
 struct romfs_file {
     int fd;
@@ -14,38 +14,29 @@ struct romfs_file {
     size_t len;
 };
 
-struct romfs_entry {
-    uint32_t parent;
-    uint32_t prev;
-    uint32_t next;
-    uint32_t isdir;
-    uint32_t len;
-    uint8_t name[PATH_MAX];
-};
-
-int romfs_open_recur(int device, char *path, int this, struct romfs_entry *entry)
+int romfs_open_recur(int device, char *path, int this, struct file_metadata_t *file_metadata)
 {
-    if (entry->isdir) {
+    if (file_metadata->isdir) {
         /* Iterate through children */
-        int pos = this + sizeof(*entry);
+        int pos = this + sizeof(*file_metadata);
         while (pos) {
-            /* Get entry */
+            /* Get file_metadata */
             lseek(device, pos, SEEK_SET);
-            read(device, entry, sizeof(*entry));
+            read(device, file_metadata, sizeof(*file_metadata));
 
             /* Compare path */
-            int len = strlen((char *)entry->name);
-            if (strncmp((char *)entry->name, path, len) == 0) {
+            int len = strlen((char *)file_metadata->name);
+            if (strncmp((char *)file_metadata->name, path, len) == 0) {
                 if (path[len] == '/') { /* Match directory */
-                    return romfs_open_recur(device, path + len + 1, pos, entry);
+                    return romfs_open_recur(device, path + len + 1, pos, file_metadata);
                 }
                 else if (path[len] == 0) { /* Match file */
                     return pos;
                 }
             }
 
-            /* Next entry */
-            pos = entry->next;
+            /* Next file_metadata */
+            pos = file_metadata->next;
         }
     }
 
@@ -53,15 +44,15 @@ int romfs_open_recur(int device, char *path, int this, struct romfs_entry *entry
 }
 
 /*
- * return entry position
+ * return file_metadata position
  */
-int romfs_open(int device, char *path, struct romfs_entry *entry)
+int romfs_open(int device, char *path, struct file_metadata_t *file_metadata)
 {
-    /* Get root entry */
+    /* Get root file_metadata */
     lseek(device, 0, SEEK_SET);
-    read(device, entry, sizeof(*entry));
+    read(device, file_metadata, sizeof(*file_metadata));
 
-    return romfs_open_recur(device, path, 0, entry);
+    return romfs_open_recur(device, path, 0, file_metadata);
 }
 
 void romfs_server()
@@ -69,7 +60,7 @@ void romfs_server()
     struct romfs_file files[ROMFS_FILE_LIMIT];
     int nfiles = 0;
     int self = gettid() + 3;
-    struct romfs_entry entry;
+    struct file_metadata_t file_metadata;
     struct fs_request request;
     int cmd;
     int from;
@@ -93,7 +84,7 @@ void romfs_server()
                     device = request.device;
                     from = request.from;
                     pos = request.pos; /* searching starting position */
-                    pos = romfs_open(request.device, request.path + pos, &entry);
+                    pos = romfs_open(request.device, request.path + pos, &file_metadata);
 
                     if (pos >= 0) { /* Found */
                         /* Register */
@@ -103,8 +94,8 @@ void romfs_server()
                             mknod(status, 0, S_IFREG);
                             files[nfiles].fd = status;
                             files[nfiles].device = request.device;
-                            files[nfiles].start = pos + sizeof(entry);
-                            files[nfiles].len = entry.len;
+                            files[nfiles].start = pos + sizeof(file_metadata);
+                            files[nfiles].len = file_metadata.len;
                             nfiles++;
                         }
                     }

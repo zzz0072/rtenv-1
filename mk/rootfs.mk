@@ -4,7 +4,7 @@ MKFS_HOST=$(OUT_DIR)/$(TOOLS_DIR)/mkrootfs
 ROOTFS_IMAGE=$(OUT_DIR)/rootfs.img
 
 # flags
-MKFS_FLAGS=-g -Wall -Werror
+MKFS_FLAGS=-g -Wall -Werror -I./include -DBUILD_HOST
 
 $(ROOTFS_OBJ): $(ROOTFS_IMAGE)
 	@$(CROSS_COMPILE)objcopy -I binary -O elf32-littlearm -B arm \

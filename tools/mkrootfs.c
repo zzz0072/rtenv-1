@@ -7,6 +7,7 @@
 #include <string.h>
 #include <error.h>
 #include <errno.h>
+#include "file_metadata.h"
 
 #define ERR_NO_DIR 1
 #define ERR_NO_OUT 2
@@ -17,15 +18,6 @@
 
 #define PATH_LEN 31
 #define BUF_SIZE 1024
-
-struct entry {
-    uint32_t parent;
-    uint32_t prev;
-    uint32_t next;
-    uint32_t isdir;
-    uint32_t len;
-    uint8_t name[PATH_LEN + 1];
-};
 
 size_t fwrite_off(const void *ptr, size_t size, size_t nmemb, FILE *stream, off_t off)
 {
@@ -66,15 +58,15 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         error(ERR(OPEN_OUT), errno, "Cannot open directory '%s'\n", fullpath);
     }
 
-    int parent_entry = ftell(outfile) - sizeof(struct entry);
-    int prev_entry = 0; /* prev = 0 means no prev */
-    int next_entry = ftell(outfile);
-    int this_entry = next_entry;
+    int parent_metadata_offset = ftell(outfile) - sizeof(struct file_metadata_t);
+    int prev_metadata_offset = 0; /* prev = 0 means no prev */
+    int next_metadata_offset = ftell(outfile);
+    int this_metadata_offset = next_metadata_offset;
 
-    struct entry entry;
-    entry.parent = parent_entry;
-    entry.prev = 0;
-    entry.next = 0;
+    struct file_metadata_t file_metadata;
+    file_metadata.parent = parent_metadata_offset;
+    file_metadata.prev = 0;
+    file_metadata.next = 0;
 
     /* Scan entries */
     while ((direntry = readdir(dirfile))) {
@@ -82,45 +74,45 @@ int procdir(const char *dirname, char *fullpath, FILE *outfile)
         if (*direntry->d_name == '.')
             continue;
 
-        this_entry = next_entry;
+        this_metadata_offset = next_metadata_offset;
 
-        entry.prev = prev_entry;
-        strncpy((void*)entry.name, direntry->d_name, PATH_LEN);
+        file_metadata.prev = prev_metadata_offset;
+        strncpy((void*)file_metadata.name, direntry->d_name, PATH_LEN);
 
         strcpy(fullpath + fullpath_len, direntry->d_name);
 
-        /* Reservion for this entry */
-        fwrite_off(&entry, sizeof(entry), 1, outfile, this_entry);
+        /* Reservion for this file_metadata */
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
 
-        /* Process entry */
+        /* Process file_metadata */
         if (direntry->d_type == DT_DIR) {
-            entry.isdir = 1;
-            next_entry = procdir(direntry->d_name, fullpath, outfile);
+            file_metadata.isdir = 1;
+            next_metadata_offset = procdir(direntry->d_name, fullpath, outfile);
         }
         else {
-            entry.isdir = 0;
-            next_entry = procfile(direntry->d_name, fullpath, outfile);
+            file_metadata.isdir = 0;
+            next_metadata_offset = procfile(direntry->d_name, fullpath, outfile);
         }
 
-        entry.next = next_entry;
-        entry.len = next_entry - (this_entry + sizeof(entry));
+        file_metadata.next = next_metadata_offset;
+        file_metadata.len = next_metadata_offset - (this_metadata_offset + sizeof(file_metadata));
 
-        /* Write entry */
-        fwrite_off(&entry, sizeof(entry), 1, outfile, this_entry);
+        /* Write file_metadata */
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
 
-        prev_entry = this_entry;
+        prev_metadata_offset = this_metadata_offset;
     }
 
-    /* Clear next of last entry */
-    if (entry.next != 0) {
-        entry.next = 0;
-        fwrite_off(&entry, sizeof(entry), 1, outfile, this_entry);
+    /* Clear next of last file_metadata */
+    if (file_metadata.next != 0) {
+        file_metadata.next = 0;
+        fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, this_metadata_offset);
     }
 
 
     closedir(dirfile);
 
-    return next_entry;
+    return next_metadata_offset;
 }
 
 int main (int argc, char *argv[])
@@ -168,17 +160,17 @@ int main (int argc, char *argv[])
 
     strcpy(fullpath, dirname);
 
-    /* Reservion for root entry */
-    struct entry entry;
-    fwrite_off(&entry, sizeof(entry), 1, outfile, 0);
+    /* Reservion for root file_metadata */
+    struct file_metadata_t file_metadata;
+    fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, 0);
     size_t end = procdir(dirname, fullpath, outfile);
 
-    entry.parent = 0;
-    entry.prev = 0;
-    entry.next = 0;
-    entry.isdir = 1;
-    entry.len = end - sizeof(entry);
-    fwrite_off(&entry, sizeof(entry), 1, outfile, 0);
+    file_metadata.parent = 0;
+    file_metadata.prev = 0;
+    file_metadata.next = 0;
+    file_metadata.isdir = 1;
+    file_metadata.len = end - sizeof(file_metadata);
+    fwrite_off(&file_metadata, sizeof(file_metadata), 1, outfile, 0);
 
     /* Clean up*/
     fclose(outfile);
