@@ -1,5 +1,7 @@
-#include "path_server.h"
 #include "syscall.h"
+#include "kconfig.h"
+#include "fifo.h"
+#include "mqueue.h"
 #include "stm32f10x.h"
 void serialout(USART_TypeDef* uart, unsigned int intr)
 {

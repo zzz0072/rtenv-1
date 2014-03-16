@@ -2,6 +2,7 @@
 #define TASK_H_20140220
 
 #include "kconfig.h"
+#include "list.h"
 
 #define TASK_READY      0
 #define TASK_WAIT_READ  1
@@ -38,11 +39,10 @@ struct task_control_block {
     int tid;
     int status;
     int priority;
-    struct task_control_block **prev;
-    struct task_control_block  *next;
+
+    struct list list;
 };
 
 unsigned int *init_task(unsigned int *stack, void (*start)());
-int task_push (struct task_control_block **list, struct task_control_block *item);
-struct task_control_block* task_pop (struct task_control_block **list);
+
 #endif

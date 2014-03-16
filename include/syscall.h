@@ -19,4 +19,7 @@ int setpriority(int who, int value);
 int mknod(int fd, int mode, int dev);
 
 void sleep(unsigned int);
+
+void lseek(int fd, int offset, int whence);
+
 #endif /* SYSCALL_H_20130919 */

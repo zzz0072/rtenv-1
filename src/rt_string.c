@@ -1,6 +1,7 @@
 #include <stdarg.h> /* For variable list */
 #include "rt_string.h"
 #include "syscall.h"
+#include "stm32f10x.h"
 
 /* TODO: Modulize kernel.c */
 extern int mq_open(const char *name, int oflag);
@@ -42,15 +43,14 @@ char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_t
     return &buf[i + 1];
 }
 
-void puts(char *msg)
+void puts(char *s)
 {
-    int fdout = mq_open("/tmp/mqueue/out", 0);
-
-    if (!msg) {
-        return;
+    while (*s) {
+        while (USART_GetFlagStatus(USART2, USART_FLAG_TXE) == RESET)
+            /* wait */ ;
+        USART_SendData(USART2, *s);
+        s++;
     }
-
-    write(fdout, msg, strlen(msg) + 1);
 }
 
 void printf(const char *fmt_str, ...)
