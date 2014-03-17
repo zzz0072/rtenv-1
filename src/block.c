@@ -1,7 +1,7 @@
 #include "block.h"
 
 #include "utils.h"
-#include "string.h"
+#include "rt_string.h"
 #include "syscall.h"
 #include "file.h"
 

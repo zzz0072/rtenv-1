@@ -2,7 +2,7 @@
 
 #include <stddef.h>
 #include "kconfig.h"
-#include "string.h"
+#include "rt_string.h"
 #include "syscall.h"
 #include "fifo.h"
 #include "mqueue.h"

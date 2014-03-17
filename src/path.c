@@ -1,7 +1,7 @@
 #include "path.h"
 
 #include "kconfig.h"
-#include "string.h"
+#include "rt_string.h"
 #include "syscall.h"
 #include "fs.h"
 

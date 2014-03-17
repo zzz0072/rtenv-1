@@ -4,7 +4,7 @@
 #include "path.h"
 #include "fs.h"
 #include "file.h"
-#include "string.h"
+#include "rt_string.h"
 #include "file_metadata.h"
 
 struct romfs_file {
