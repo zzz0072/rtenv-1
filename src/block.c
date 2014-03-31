@@ -282,11 +282,11 @@ int block_event_release(struct event_monitor *monitor, int event,
     struct file_request *request = (void*)task->stack->r0;
 
     switch (task->stack->r7) {
-        case 0x04:
+        case SYS_CALL_READ:
             return file_read(file, request, monitor);
-        case 0x03:
+        case SYS_CALL_WRITE:
             return file_write(file, request, monitor);
-        case 0x0a:
+        case SYS_CALL_LSEEK:
             return file_lseek(file, request, monitor);
         default:
             return 0;
