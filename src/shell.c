@@ -444,7 +444,7 @@ void cmd_cat(int argc, char *argv[])
 
     printf("\n\r");
     /* Read file */
-    while (rval == CMDBUF_SIZE) {
+    while (rval != 0) {
         rval = read(fd, buf, CMDBUF_SIZE);
         if (rval == -1) {
             printf("Read file %s failed\n\r", argv[1]);
