@@ -444,6 +444,8 @@ void cmd_cat(int argc, char *argv[])
 
     printf("\n\r");
     /* Read file */
+    lseek(fd, 0, SEEK_SET);
+
     while (rval != 0) {
         rval = read(fd, buf, CMDBUF_SIZE);
         if (rval == -1) {
