@@ -106,7 +106,7 @@ check: src/unit_test.c include/unit_test.h
 	@pkill -9 $(notdir $(QEMU_STM32))
 
 clean:
-	rm -fr $(OUT_DIR)
+	rm -fr $(OUT_DIR) gdb.txt
 
 distclean: clean
 	rm -fr $(ROOTFS_DIR)
