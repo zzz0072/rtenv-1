@@ -53,18 +53,6 @@ int open(const char *pathname, int flags)
     return fd;
 }
 
-int file_release(struct event_monitor *monitor, int event,
-                  struct task_control_block *task, void *data)
-{
-    struct file *file = data;
-    struct file_request *request = (void*)task->stack->r0;
-
-    if (FILE_EVENT_IS_READ(event))
-        return file_read(file, request, monitor);
-    else
-        return file_write(file, request, monitor);
-}
-
 int file_read(struct file *file, struct file_request *request,
               struct event_monitor *monitor)
 {
