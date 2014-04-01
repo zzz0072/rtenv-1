@@ -6,13 +6,15 @@
 
 void *memcpy(void *dest, const void *src, size_t n);
 void *memset(void *dest, int c, size_t n);
-void  puts(char *s);
+void  puts(const char *s);
 void  print(char *msg);
-void  printf(const char *fmt_str, ...);
+int printf(const char *format, ...);
+int sprintf(char *str, const char *format, ...);
 
 size_t strlen(const char *s);
 int    strcmp(const char *a, const char *b);
 int    strncmp(const char *a, const char *b, size_t n);
+char  *strcat(char *dest, const char *src);
 
 /* Warning!! Last atoi buf element needs to be set to \0 */
 /*           for itoa(), htoa() and addrtoa()            */

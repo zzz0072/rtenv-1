@@ -17,6 +17,19 @@ int strncmp(const char *str_a, const char *str_b, size_t n)
     return (int) (*str_a - *str_b);
 }
 
+char *strcat(char *dest, const char *src)
+{
+    size_t src_len  = strlen(src);
+    size_t dest_len = strlen(dest);
+
+    if (!dest || !src) {
+        return dest;
+    }
+
+    memcpy(dest + dest_len, src, src_len + 1);
+    return dest;
+}
+
 char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_type)
 {
     char has_minus = 0;
@@ -43,7 +56,7 @@ char* num_to_string(unsigned int val, int base, char *buf, enum int_type_t int_t
     return &buf[i + 1];
 }
 
-void puts(char *msg)
+void puts(const char *msg)
 {
     int fdout = mq_open("/tmp/mqueue/out", 0);
     size_t rval = 0;
@@ -58,18 +71,36 @@ void puts(char *msg)
     }
 }
 
-void printf(const char *fmt_str, ...)
+static int printf_cb(char *dest, const char *src)
 {
-    va_list param = {0};
+    puts(src);
 
-    char  param_chr[] = {0, 0};
+    return 0; /* just for obeying prototype */
+}
+
+static int sprintf_cb(char *dest, const char *src)
+{
+    return (int)strcat(dest, src);
+}
+
+typedef int (*proc_str_func_t)(char *, const char *);
+
+/* Common body for sprintf and printf */
+static int base_printf(proc_str_func_t proc_str, \
+                char *dest, const char *fmt_str, va_list param)
+{
+    char  param_chr[] = {0, 0}; 
     int   param_int = 0;
 
-    char itoa_buf[MAX_ITOA_CHARS] = {0};
     char *str_to_output = 0;
-    int   curr_char  = 0;
+    char itoa_buf[MAX_ITOA_CHARS] = {0};
+    int  curr_char  = 0;
 
-    va_start(param, fmt_str);
+    /* Make sure strlen(dest) is 0
+     * for first strcat */
+    if (dest) {
+        dest[0] = 0;
+    }
 
     /* Let's parse */
     while (fmt_str[curr_char]) {
@@ -121,10 +152,34 @@ void printf(const char *fmt_str, ...)
             } /* switch (fmt_str[curr_char])      */
             curr_char++;
         }     /* if (fmt_str[curr_char++] == '%') */
-        puts(str_to_output);
+        proc_str(dest, str_to_output);
     }         /* while (fmt_str[curr_char])       */
 
+    return curr_char;
+}
+
+int sprintf(char *str, const char *format, ...)
+{
+    int rval = 0;
+    va_list param = {0};
+
+    va_start(param, format);
+    rval = base_printf(sprintf_cb, (char *)str, format, param);
     va_end(param);
+
+    return rval;
+}
+
+int printf(const char *format, ...)
+{
+    int rval = 0;
+    va_list param = {0};
+
+    va_start(param, format);
+    rval = base_printf(printf_cb, (char *)0, format, param);
+    va_end(param);
+
+    return rval;
 }
 
 #ifndef USE_ASM_OPTI_FUNC
