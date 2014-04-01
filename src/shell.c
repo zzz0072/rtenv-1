@@ -8,7 +8,7 @@
 #include "shell.h"
 
 /* Internal defines */
-#define PROMPT USER_NAME "@" USER_NAME "-STM32:~$ "
+#define PROMPT USER_NAME "@" USER_NAME "-STM32:"
 
 #define BACKSPACE (127)
 #define ESC        (27)
@@ -61,6 +61,7 @@ static const hcmd_entry g_available_cmds[] = {
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
 
+static char g_cwd[PATH_MAX] = "/"; /* Current working directory */
 #define CMD_COUNT (sizeof(g_available_cmds)/sizeof(hcmd_entry))
 /************************
  * Internal functions
@@ -584,10 +585,13 @@ void cmd_history(int argc, char *argv[])
 void shell_task()
 {
     char *read_str = 0;
+    char prompt[PATH_MAX * 2];
+
+    sprintf(prompt, "%s%s$ ", PROMPT, g_cwd);
 
     cmd_help(0, 0);
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
-        read_str = readline(PROMPT);
+        read_str = readline(prompt);
         if (!read_str) {
             continue;
         }
