@@ -5,7 +5,7 @@ qemu: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 qemudbg: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 \
 		-gdb tcp::3333 -S \
-		-kernel $(OUT_DIR)/$(TARGET).bin
+		-kernel $(OUT_DIR)/$(TARGET).bin -monitor null
 
 qemu_remote: $(OUT_DIR)/$(TARGET).bin $(QEMU_STM32)
 	$(QEMU_STM32) -M stm32-p103 -kernel $(OUT_DIR)/$(TARGET).bin -vnc :1
