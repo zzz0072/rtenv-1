@@ -31,7 +31,7 @@ void pathserver()
     int nmounts = 0;
     int i = 0;
     int cmd = 0;
-    unsigned int plen = 0;
+    unsigned int path_len = 0;
     unsigned int replyfd = 0;
     char path[PATH_MAX];
     int dev = 0;
@@ -47,12 +47,12 @@ void pathserver()
 
         switch (cmd) {
             case PATH_CMD_MKFILE:
-                read(PATHSERVER_FD, &plen, 4);
-                read(PATHSERVER_FD, path, plen);
+                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, path, path_len);
                 read(PATHSERVER_FD, &dev, 4);
                 newfd = npaths + 3 + TASK_LIMIT;
                 if (mknod(newfd, 0, dev) == 0) {
-                    memcpy(paths[npaths], path, plen);
+                    memcpy(paths[npaths], path, path_len);
                     npaths++;
                 }
                 else {
@@ -62,8 +62,8 @@ void pathserver()
                 break;
 
             case PATH_CMD_OPEN:
-                read(PATHSERVER_FD, &plen, 4);
-                read(PATHSERVER_FD, path, plen);
+                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, path, path_len);
                 /* Search for path */
                 for (i = 0; i < npaths; i++) {
                     if (*paths[i] && strcmp(path, paths[i]) == 0) {
@@ -90,7 +90,7 @@ void pathserver()
                         request.from = replyfd;
                         request.device = mounts[i].dev;
                         request.pos = mlen; /* search starting position */
-                        memcpy(request.path, &path, plen);
+                        memcpy(request.path, &path, path_len);
                         write(mounts[i].fs, &request, sizeof(request));
                         i = 0;
                         break;
@@ -104,19 +104,19 @@ void pathserver()
                 break;
 
             case PATH_CMD_REGISTER_PATH:
-                read(PATHSERVER_FD, &plen, 4);
-                read(PATHSERVER_FD, path, plen);
+                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, path, path_len);
                 newfd = npaths + 3 + TASK_LIMIT;
-                memcpy(paths[npaths], path, plen);
+                memcpy(paths[npaths], path, path_len);
                 npaths++;
                 write(replyfd, &newfd, 4);
                 break;
 
             case PATH_CMD_REGISTER_FS:
-                read(PATHSERVER_FD, &plen, 4);
-                read(PATHSERVER_FD, fs_type, plen);
+                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, fs_type, path_len);
                 fs_fds[nfs_types] = replyfd;
-                memcpy(fs_types[nfs_types], fs_type, plen);
+                memcpy(fs_types[nfs_types], fs_type, path_len);
                 nfs_types++;
                 i = 0;
                 write(replyfd, &i, 4);
@@ -183,15 +183,15 @@ int path_register(const char *pathname)
 {
     int cmd = PATH_CMD_REGISTER_PATH;
     unsigned int replyfd = gettid() + 3;
-    size_t plen = strlen(pathname)+1;
+    size_t path_len = strlen(pathname)+1;
     int fd = -1;
     char buf[4+4+4+PATH_MAX];
     int pos = 0;
 
     path_write_data(buf, &cmd, 4, pos);
     path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &plen, 4, pos);
-    path_write_data(buf, pathname, plen, pos);
+    path_write_data(buf, &path_len, 4, pos);
+    path_write_data(buf, pathname, path_len, pos);
 
     write(PATHSERVER_FD, buf, pos);
     read(replyfd, &fd, 4);
@@ -203,15 +203,15 @@ int path_register_fs(const char *type)
 {
     int cmd = PATH_CMD_REGISTER_FS;
     unsigned int replyfd = gettid() + 3;
-    size_t plen = strlen(type)+1;
+    size_t type_len = strlen(type)+1;
     int fd = -1;
     char buf[4+4+4+PATH_MAX];
     int pos = 0;
 
     path_write_data(buf, &cmd, 4, pos);
     path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &plen, 4, pos);
-    path_write_data(buf, type, plen, pos);
+    path_write_data(buf, &type_len, 4, pos);
+    path_write_data(buf, type, type_len, pos);
 
     write(PATHSERVER_FD, buf, pos);
     read(replyfd, &fd, 4);
