@@ -73,6 +73,6 @@ void sleep(unsigned int msec)
 void lseek(int fd, int offset, int whence) __attribute__ ((naked));
 void lseek(int fd, int offset, int whence)
 {
-    SYS_CALL_BODY(TO_STR(SYS_CALL_SLEEP));
+    SYS_CALL_BODY(TO_STR(SYS_CALL_LSEEK));
 }
 
