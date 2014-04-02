@@ -64,7 +64,9 @@ void pathserver()
             case PATH_CMD_OPEN:
                 read(PATHSERVER_FD, &path_len, 4);
                 read(PATHSERVER_FD, path, path_len);
-                /* Search for path */
+
+                /* Search files in paths[] first path is assigned while
+                 * mkfifo or path_register was called */
                 for (i = 0; i < npaths; i++) {
                     if (*paths[i] && strcmp(path, paths[i]) == 0) {
                         i += 3; /* 0-2 are reserved */
@@ -79,7 +81,11 @@ void pathserver()
                     break;
                 }
 
-                /* Search for mount point */
+                /* Search for mount point if its no opened romfs file,
+                 * or FIFO file with mkfifo.
+                 *
+                 * This is done by sending FS_CMD_OPEN request.
+                 * path_register will be called eventually */
                 for (i = 0; i < nmounts; i++) {
                     if (*mounts[i].path
                             && strncmp(path, mounts[i].path,
