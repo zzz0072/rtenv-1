@@ -25,6 +25,7 @@ void cmd_ps(int argc, char *argv[]);
 void cmd_man(int argc, char *argv[]);
 void cmd_history(int argc, char *argv[]);
 void cmd_cat(int argc, char *argv[]);
+void cmd_ls(int argc, char *argv[]);
 
 /**************************
  * Internal data structures
@@ -57,6 +58,7 @@ static const hcmd_entry g_available_cmds[] = {
     ADD_CMD(man,     "manaual for commands"),
     ADD_CMD(ps,      "List task information"),
     ADD_CMD(cat,     "dump file to serial out"),
+    ADD_CMD(ls,      "list file in rootfs. ex: ls or ls /"),
 };
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
@@ -424,6 +426,15 @@ static void cat_buf(const char *buf, int buf_size)
 /************************
  * Command handlers
 *************************/
+void cmd_ls(int argc, char *argv[])
+{
+    if (argc > 2) {
+        printf("ls only suppurt at most one argument\n\r");
+    }
+
+    /* test */
+}
+
 void cmd_cat(int argc, char *argv[])
 {
     int rval = CMDBUF_SIZE;
