@@ -428,11 +428,28 @@ static void cat_buf(const char *buf, int buf_size)
 *************************/
 void cmd_ls(int argc, char *argv[])
 {
+    char *list_file = g_cwd;
+    int rval = 0;
+
+    struct stat fstat;
     if (argc > 2) {
         printf("ls only suppurt at most one argument\n\r");
     }
 
-    /* test */
+    /* test stat */
+    if (argc == 2) {
+        list_file = argv[1];
+    }
+
+    rval = stat(list_file, &fstat);
+    if (rval == -1) {
+        printf("Stat failed. Maybe file does not exit?\n\r");
+        return;
+    }
+
+    printf("name:\t%s\n\r", fstat.name);
+    printf("len:\t%d\n\r", fstat.len);
+    printf("isdir:\t%d\n\r", fstat.isdir);
 }
 
 void cmd_cat(int argc, char *argv[])

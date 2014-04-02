@@ -1,6 +1,7 @@
 #ifndef FILE_H
 #define FILE_H
 
+#include <stdint.h>
 #include "stddef.h"
 #include "task.h"
 #include "event-monitor.h"
@@ -41,6 +42,12 @@ struct file {
     struct file_operations *ops;
 };
 
+struct stat {
+    uint32_t isdir;
+    uint32_t len;
+    uint8_t name[PATH_MAX];
+};
+
 struct file_operations {
     int (*readable)(struct file*, struct file_request*, struct event_monitor *);
     int (*writable)(struct file*, struct file_request*, struct event_monitor *);
@@ -52,6 +59,7 @@ struct file_operations {
 
 int mkfile(const char *pathname, int mode, int dev);
 int open(const char *pathname, int flags);
+int stat(const char *path, struct stat *buf);
 
 int file_read(struct file *file, struct file_request *request,
               struct event_monitor *monitor);

@@ -1,5 +1,6 @@
 #include "path.h"
 
+#include "file.h"
 #include "kconfig.h"
 #include "rt_string.h"
 #include "syscall.h"
@@ -108,6 +109,40 @@ void pathserver()
                     write(replyfd, &i, INT_SIZE);
                 }
                 break;
+
+            case PATH_CMD_STAT:
+                {
+                    struct stat fstat = {0};
+
+                    status = 0;
+                    /* Get file name */
+                    read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
+                    read(PATHSERVER_FD, path, path_len);
+
+                    /* Get file stat, response was sent by mounted fs */
+                    for (i = 0; i < nmounts; i++) {
+                        if (*mounts[i].path
+                                && strncmp(path, mounts[i].path,
+                                           strlen(mounts[i].path)) == 0) {
+                            int mlen = strlen(mounts[i].path);
+                            struct fs_request request;
+                            request.cmd = FS_CMD_STAT;
+                            request.from = replyfd;
+                            request.device = mounts[i].dev;
+                            request.pos = mlen; /* search starting position */
+                            memcpy(request.path, &path, path_len);
+                            write(mounts[i].fs, &request, sizeof(request));
+                            break;
+                        }
+                    }
+
+                    /* Not found */
+                    if (i >= nmounts) {
+                        status = -1;
+                        write(replyfd, &fstat, sizeof(fstat));
+                        write(replyfd, &status, INT_SIZE);
+                    }
+                } break;
 
             case PATH_CMD_REGISTER_PATH:
                 read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);

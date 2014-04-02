@@ -53,6 +53,30 @@ int open(const char *pathname, int flags)
     return fd;
 }
 
+int stat(const char *pathname, struct stat *stat)
+{
+    int cmd = PATH_CMD_STAT;
+    unsigned int replyfd = gettid() + 3;
+    size_t path_len = strlen(pathname) + 1;
+    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX];
+    int pos = 0;
+    int rval = 0;
+
+    /* Send request to path server */
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &path_len, SIZE_T_SIZE, pos);
+    path_write_data(buf, pathname, path_len, pos);
+
+    write(PATHSERVER_FD, buf, pos);
+
+    /* Response */
+    read(replyfd, stat, sizeof(struct stat));
+    read(replyfd, &rval, INT_SIZE);
+
+    return rval;
+}
+
 int file_read(struct file *file, struct file_request *request,
               struct event_monitor *monitor)
 {

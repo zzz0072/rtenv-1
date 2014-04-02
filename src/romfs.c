@@ -1,3 +1,4 @@
+#include <string.h>
 #include "romfs.h"
 
 #include "syscall.h"
@@ -106,6 +107,7 @@ void romfs_server()
                     /* Response */
                     write(from, &status, sizeof(status));
                     break;
+
                 case FS_CMD_READ:
                     from = request.from;
                     target = request.target;
@@ -172,6 +174,29 @@ void romfs_server()
                     }
                     lseek(target, size, SEEK_SET);
                     break;
+
+                case FS_CMD_STAT:
+                    {
+                        struct stat fstat = {0};
+
+                        device = request.device;
+                        from = request.from;
+                        status = 0;
+                        pos = request.pos; /* searching starting position */
+                        pos = romfs_open(request.device, request.path + pos, &file_metadata);
+
+                        if (pos >= 0) { /* Found */
+                            fstat.isdir = file_metadata.isdir;
+                            fstat.len = file_metadata.len;
+                            strcpy((char *)fstat.name, (char *)file_metadata.name);
+                        }
+                        else {
+                            status = -1;
+                        }
+
+                        write(from, &fstat, sizeof(fstat));
+                        write(from, &status, sizeof(status));
+                    } break;
 
                 case FS_CMD_WRITE: /* readonly */
                 default:
