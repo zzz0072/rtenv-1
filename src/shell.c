@@ -26,6 +26,7 @@ void cmd_man(int argc, char *argv[]);
 void cmd_history(int argc, char *argv[]);
 void cmd_cat(int argc, char *argv[]);
 void cmd_ls(int argc, char *argv[]);
+void cmd_cd(int argc, char *argv[]);
 
 /**************************
  * Internal data structures
@@ -59,6 +60,7 @@ static const hcmd_entry g_available_cmds[] = {
     ADD_CMD(ps,      "List task information"),
     ADD_CMD(cat,     "dump file to serial out"),
     ADD_CMD(ls,      "list file in rootfs. ex: ls or ls /"),
+    ADD_CMD(cd,      "change dir, will list current working dir if no argument"),
 };
 
 static evar_entry g_env_var[MAX_ENVCOUNT];
@@ -422,12 +424,12 @@ static void cat_buf(const char *buf, int buf_size)
         }
     }
 }
-
 /************************
  * Command handlers
 *************************/
 void cmd_ls(int argc, char *argv[])
 {
+    char abs_path[PATH_MAX] = {0};
     char *list_file = g_cwd;
     int rval = 0;
 
@@ -436,11 +438,23 @@ void cmd_ls(int argc, char *argv[])
         printf("ls only suppurt at most one argument\n\r");
     }
 
-    /* test stat */
     if (argc == 2) {
         list_file = argv[1];
+        /* Append prefix if needed */
+        if (argv[1][0] != '/') {
+
+            /* / is a special case */
+            if (strlen(g_cwd) > 1) {
+                sprintf(abs_path, "%s/%s", g_cwd, argv[1]);
+            }
+            else {
+                sprintf(abs_path, "%s%s", g_cwd, argv[1]);
+            }
+            list_file = abs_path;
+        }
     }
 
+    /* test stat */
     rval = stat(list_file, &fstat);
     if (rval == -1) {
         printf("Stat failed. Maybe file does not exit?\n\r");
@@ -451,6 +465,42 @@ void cmd_ls(int argc, char *argv[])
     printf("len:\t%d\n\r", fstat.len);
     printf("isdir:\t%d\n\r", fstat.isdir);
 }
+
+void cmd_cd(int argc, char *argv[])
+{
+    int rval = 0;
+    char abs_path[PATH_MAX] = {0};
+    char *cd_dir = abs_path;
+    struct stat fstat;
+
+    if (argc > 2) {
+        printf("ls only suppurt at most one argument\n\r");
+    }
+
+    if (argc == 1) {
+        printf("%s\n\r", g_cwd);
+    }
+
+    /* Append prefix if needed */
+    if (argv[1][0] != '/') {
+        sprintf(abs_path, "%s%s", g_cwd, argv[1]);
+    }
+    else {
+        cd_dir = argv[1];
+    }
+
+    /* / is a special case, it does not really exist */
+    if (strcmp(cd_dir, "/")) {
+        rval = stat(cd_dir, &fstat);
+        if (rval == -1) {
+            printf("Stat failed. Maybe file does not exit?\n\r");
+            return;
+        }
+    }
+
+    strncpy(g_cwd, cd_dir, PATH_MAX);
+}
+
 
 void cmd_cat(int argc, char *argv[])
 {
@@ -615,10 +665,9 @@ void shell_task()
     char *read_str = 0;
     char prompt[PATH_MAX * 2];
 
-    sprintf(prompt, "%s%s$ ", PROMPT, g_cwd);
-
     cmd_help(0, 0);
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
+        sprintf(prompt, "%s%s$ ", PROMPT, g_cwd);
         read_str = readline(prompt);
         if (!read_str) {
             continue;
