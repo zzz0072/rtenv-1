@@ -7,10 +7,10 @@
 #include "memory-pool.h"
 
 /* file types */
-#define S_IFIFO 1
-#define S_IMSGQ 2
-#define S_IFBLK 6
-#define S_IFREG 010
+#define S_IFIFO (0x01)
+#define S_IMSGQ (0x02)
+#define S_IFBLK (0x04)
+#define S_IFREG (0x08)
 
 /* file flags */
 #define O_CREAT 4
