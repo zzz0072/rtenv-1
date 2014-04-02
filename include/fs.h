@@ -3,10 +3,10 @@
 
 #include "kconfig.h"
 
-#define FS_CMD_OPEN 1
-#define FS_CMD_READ 2
-#define FS_CMD_WRITE 3
-#define FS_CMD_SEEK 4
+#define FS_CMD_OPEN  (1)
+#define FS_CMD_READ  (2)
+#define FS_CMD_WRITE (3)
+#define FS_CMD_SEEK  (4)
 
 struct fs_request {
     int cmd;
