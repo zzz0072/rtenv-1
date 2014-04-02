@@ -136,15 +136,20 @@ int main()
                 /* Compute how much of the stack is used */
                 size_t used = stacks[current_task] + STACK_SIZE
                           - (unsigned int*)g_tasks[current_task].stack;
+
                 /* New stack is END - used */
                 g_tasks[g_task_count].stack = (void*)(stacks[g_task_count] + STACK_SIZE - used);
+
                 /* Copy only the used part of the stack */
                 memcpy(g_tasks[g_task_count].stack, g_tasks[current_task].stack,
                        used * sizeof(unsigned int));
+
                 /* Set PID */
                 g_tasks[g_task_count].tid = g_task_count;
+
                 /* Set priority, inherited from forked task */
                 g_tasks[g_task_count].priority = g_tasks[current_task].priority;
+
                 /* Set return values in each process */
                 g_tasks[current_task].stack->r0 = g_task_count;
                 g_tasks[g_task_count].stack->r0 = 0;
