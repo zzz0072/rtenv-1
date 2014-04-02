@@ -11,6 +11,6 @@
 #define SYS_CALL_SETPRIORITY   (0x07)
 #define SYS_CALL_MK_NODE       (0x08)
 #define SYS_CALL_SLEEP         (0x09)
-#define SYS_CALL_LSEEK         (0x0a)
+#define SYS_CALL_LSEEK         (0x0A)
 
 #endif /* SYSCALL_DEF_H_20130919 */
