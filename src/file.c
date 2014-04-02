@@ -15,19 +15,19 @@ int mkfile(const char *pathname, int mode, int dev)
     int cmd = PATH_CMD_MKFILE;
     unsigned int replyfd = gettid() + 3;
     size_t path_len = strlen(pathname)+1;
-    char buf[4 + 4 + 4 + PATH_MAX + 4];
+    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX + INT_SIZE];
     (void) mode;
     int pos = 0;
     int status = 0;
 
-    path_write_data(buf, &cmd, 4, pos);
-    path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &path_len, 4, pos);
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &path_len, SIZE_T_SIZE, pos);
     path_write_data(buf, pathname, path_len, pos);
-    path_write_data(buf, &dev, 4, pos);
+    path_write_data(buf, &dev, INT_SIZE, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &status, 4);
+    read(replyfd, &status, INT_SIZE);
 
     return status;
 }
@@ -38,17 +38,17 @@ int open(const char *pathname, int flags)
     unsigned int replyfd = gettid() + 3;
     size_t path_len = strlen(pathname) + 1;
     unsigned int fd = -1;
-    char buf[4 + 4 + 4 + PATH_MAX];
+    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX];
     (void) flags;
     int pos = 0;
 
-    path_write_data(buf, &cmd, 4, pos);
-    path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &path_len, 4, pos);
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &path_len, SIZE_T_SIZE, pos);
     path_write_data(buf, pathname, path_len, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &fd, 4);
+    read(replyfd, &fd, INT_SIZE);
 
     return fd;
 }

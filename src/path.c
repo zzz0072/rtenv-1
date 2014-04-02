@@ -31,7 +31,7 @@ void pathserver()
     int nmounts = 0;
     int i = 0;
     int cmd = 0;
-    unsigned int path_len = 0;
+    size_t path_len = 0;
     unsigned int replyfd = 0;
     char path[PATH_MAX];
     int dev = 0;
@@ -42,14 +42,14 @@ void pathserver()
     memcpy(paths[npaths++], PATH_SERVER_NAME, sizeof(PATH_SERVER_NAME));
 
     while (1) {
-        read(PATHSERVER_FD, &cmd, 4);
-        read(PATHSERVER_FD, &replyfd, 4);
+        read(PATHSERVER_FD, &cmd, INT_SIZE);
+        read(PATHSERVER_FD, &replyfd, INT_SIZE);
 
         switch (cmd) {
             case PATH_CMD_MKFILE:
-                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
                 read(PATHSERVER_FD, path, path_len);
-                read(PATHSERVER_FD, &dev, 4);
+                read(PATHSERVER_FD, &dev, INT_SIZE);
                 newfd = npaths + 3 + TASK_LIMIT;
                 if (mknod(newfd, 0, dev) == 0) {
                     memcpy(paths[npaths], path, path_len);
@@ -58,11 +58,11 @@ void pathserver()
                 else {
                     newfd = -1;
                 }
-                write(replyfd, &newfd, 4);
+                write(replyfd, &newfd, INT_SIZE);
                 break;
 
             case PATH_CMD_OPEN:
-                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
                 read(PATHSERVER_FD, path, path_len);
 
                 /* Search files in paths[] first path is assigned while
@@ -71,7 +71,7 @@ void pathserver()
                     if (*paths[i] && strcmp(path, paths[i]) == 0) {
                         i += 3; /* 0-2 are reserved */
                         i += TASK_LIMIT; /* FDs reserved for tasks */
-                        write(replyfd, &i, 4);
+                        write(replyfd, &i, INT_SIZE);
                         i = 0;
                         break;
                     }
@@ -105,41 +105,41 @@ void pathserver()
 
                 if (i >= nmounts) {
                     i = -1; /* Error: not found */
-                    write(replyfd, &i, 4);
+                    write(replyfd, &i, INT_SIZE);
                 }
                 break;
 
             case PATH_CMD_REGISTER_PATH:
-                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
                 read(PATHSERVER_FD, path, path_len);
                 newfd = npaths + 3 + TASK_LIMIT;
                 memcpy(paths[npaths], path, path_len);
                 npaths++;
-                write(replyfd, &newfd, 4);
+                write(replyfd, &newfd, INT_SIZE);
                 break;
 
             case PATH_CMD_REGISTER_FS:
-                read(PATHSERVER_FD, &path_len, 4);
+                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
                 read(PATHSERVER_FD, fs_type, path_len);
                 fs_fds[nfs_types] = replyfd;
                 memcpy(fs_types[nfs_types], fs_type, path_len);
                 nfs_types++;
                 i = 0;
-                write(replyfd, &i, 4);
+                write(replyfd, &i, INT_SIZE);
                 break;
 
             case PATH_CMD_MOUNT: {
-                int slen;
-                int dlen;
-                int tlen;
+                size_t slen;
+                size_t dlen;
+                size_t tlen;
                 char src[PATH_MAX];
                 char dst[PATH_MAX];
                 char type[FS_TYPE_MAX];
-                read(PATHSERVER_FD, &slen, 4);
+                read(PATHSERVER_FD, &slen, SIZE_T_SIZE);
                 read(PATHSERVER_FD, src, slen);
-                read(PATHSERVER_FD, &dlen, 4);
+                read(PATHSERVER_FD, &dlen, SIZE_T_SIZE);
                 read(PATHSERVER_FD, dst, dlen);
-                read(PATHSERVER_FD, &tlen, 4);
+                read(PATHSERVER_FD, &tlen, SIZE_T_SIZE);
                 read(PATHSERVER_FD, type, tlen);
 
                 /* Search for filesystem types */
@@ -151,7 +151,7 @@ void pathserver()
 
                 if (i >= nfs_types) {
                     status = -1; /* Error: not found */
-                    write(replyfd, &status, 4);
+                    write(replyfd, &status, INT_SIZE);
                     break;
                 }
 
@@ -166,7 +166,7 @@ void pathserver()
 
                 if (i >= npaths) {
                     status = -1; /* Error: not found */
-                    write(replyfd, &status, 4);
+                    write(replyfd, &status, INT_SIZE);
                     break;
                 }
 
@@ -176,7 +176,7 @@ void pathserver()
                 nmounts++;
 
                 status = 0;
-                write(replyfd, &status, 4);
+                write(replyfd, &status, INT_SIZE);
             }   break;
 
             default:
@@ -191,16 +191,16 @@ int path_register(const char *pathname)
     unsigned int replyfd = gettid() + 3;
     size_t path_len = strlen(pathname)+1;
     int fd = -1;
-    char buf[4+4+4+PATH_MAX];
+    char buf[INT_SIZE + INT_SIZE + INT_SIZE + PATH_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, 4, pos);
-    path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &path_len, 4, pos);
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &path_len, SIZE_T_SIZE, pos);
     path_write_data(buf, pathname, path_len, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &fd, 4);
+    read(replyfd, &fd, INT_SIZE);
 
     return fd;
 }
@@ -211,16 +211,16 @@ int path_register_fs(const char *type)
     unsigned int replyfd = gettid() + 3;
     size_t type_len = strlen(type)+1;
     int fd = -1;
-    char buf[4+4+4+PATH_MAX];
+    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, 4, pos);
-    path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &type_len, 4, pos);
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &type_len, SIZE_T_SIZE, pos);
     path_write_data(buf, type, type_len, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &fd, 4);
+    read(replyfd, &fd, INT_SIZE);
 
     return fd;
 }
@@ -233,20 +233,27 @@ int mount(const char *src, const char *dst, const char *type, int flags)
     size_t dlen = strlen(dst) + 1;
     size_t tlen = strlen(type) + 1;
     int status;
-    char buf[4 + 4 + 4 + PATH_MAX + 4 + PATH_MAX + 4 + FS_TYPE_MAX];
+    char buf[INT_SIZE +
+             INT_SIZE +
+             SIZE_T_SIZE +
+             PATH_MAX +
+             SIZE_T_SIZE +
+             PATH_MAX +
+             SIZE_T_SIZE +
+             FS_TYPE_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, 4, pos);
-    path_write_data(buf, &replyfd, 4, pos);
-    path_write_data(buf, &slen, 4, pos);
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &slen, SIZE_T_SIZE, pos);
     path_write_data(buf, src, slen, pos);
-    path_write_data(buf, &dlen, 4, pos);
+    path_write_data(buf, &dlen, SIZE_T_SIZE, pos);
     path_write_data(buf, dst, dlen, pos);
-    path_write_data(buf, &tlen, 4, pos);
+    path_write_data(buf, &tlen, SIZE_T_SIZE, pos);
     path_write_data(buf, type, tlen, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &status, 4);
+    read(replyfd, &status, INT_SIZE);
 
     return status;
 }
