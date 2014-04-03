@@ -104,6 +104,9 @@ static void hist_expand()
 }
 
 /* Split command into tokens. */
+/* Kind of strtok, first call with string then null
+ * parameter after first call untill cmdtok returns
+ * null */
 static char *cmdtok(char *cmd)
 {
     static char *cur = NULL;
@@ -111,6 +114,8 @@ static char *cmdtok(char *cmd)
     if (cmd) {
         char quo = '\0';
         cur = cmd;
+
+        /* Separate tokens */
         for (end = cmd; *end; end++) {
             if (*end == '\'' || *end == '\"') {
                 if (quo == *end)
@@ -123,9 +128,11 @@ static char *cmdtok(char *cmd)
                 *end = '\0';
         }
     }
-    else
+    else {
+        /* Get next token */
         for (; *cur; cur++)
             ;
+    }
 
     for (; *cur == '\0'; cur++)
         if (cur == end) return NULL;
