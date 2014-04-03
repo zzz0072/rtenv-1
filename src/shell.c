@@ -447,9 +447,9 @@ void cmd_ls(int argc, char *argv[])
 
     if (argc == 2) {
         list_file = argv[1];
+
         /* Append prefix if needed */
         if (argv[1][0] != '/') {
-
             /* / is a special case */
             if (strlen(g_cwd) > 1) {
                 sprintf(abs_path, "%s/%s", g_cwd, argv[1]);
@@ -486,11 +486,18 @@ void cmd_cd(int argc, char *argv[])
 
     if (argc == 1) {
         printf("%s\n\r", g_cwd);
+        return;
     }
 
     /* Append prefix if needed */
     if (argv[1][0] != '/') {
-        sprintf(abs_path, "%s%s", g_cwd, argv[1]);
+        /* / is a special case */
+        if (strlen(g_cwd) > 1) {
+            sprintf(abs_path, "%s/%s", g_cwd, argv[1]);
+        }
+        else {
+            sprintf(abs_path, "%s%s", g_cwd, argv[1]);
+        }
     }
     else {
         cd_dir = argv[1];
