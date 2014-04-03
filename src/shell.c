@@ -522,6 +522,8 @@ void cmd_cat(int argc, char *argv[])
     int rval = CMDBUF_SIZE;
     int fd = 0;
     char buf[CMDBUF_SIZE];
+    char abs_path[PATH_MAX] = {0};
+    char *cat_file = abs_path;
 
     /* Current only one file*/
     if (argc != 2) {
@@ -529,8 +531,13 @@ void cmd_cat(int argc, char *argv[])
         return;
     }
 
+    /* Convert to absolute path if needed */
+    if(to_abs_path(argv[1], abs_path) == 0) {
+        cat_file = argv[1];
+    }
+
     /* Open file */
-    fd = open(argv[1], 0);
+    fd = open(cat_file, 0);
     if (fd == -1) {
         printf("Open file %s failed\n\r", argv[1]);
         return;
