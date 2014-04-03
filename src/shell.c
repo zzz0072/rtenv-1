@@ -507,8 +507,8 @@ void cmd_cd(int argc, char *argv[])
     /* / is a special case, it does not really exist */
     if (strcmp(cd_dir, "/")) {
         rval = stat(cd_dir, &fstat);
-        if (rval == -1) {
-            printf("Stat failed. Maybe file does not exit?\n\r");
+        if (rval == -1 || fstat.isdir == 0) {
+            printf("Stat failed. Maybe file does not exit or is not a directory?\n\r");
             return;
         }
     }
