@@ -3,6 +3,7 @@
 #include <string.h>
 #include "file.h"
 #include "rt_string.h"
+#include "rt_dirent.h"
 #include "syscall.h"
 #include "malloc.h"
 #include "shell.h"
@@ -454,6 +455,7 @@ static int to_abs_path(const char *path, char * abs_path)
 *************************/
 void cmd_ls(int argc, char *argv[])
 {
+    RT_DIR dir_handler = 0;
     char abs_path[PATH_MAX] = {0};
     char *list_file = g_cwd;
     int rval = 0;
@@ -481,6 +483,20 @@ void cmd_ls(int argc, char *argv[])
     printf("name:\t%s\n\r", fstat.name);
     printf("len:\t%d\n\r", fstat.len);
     printf("isdir:\t%d\n\r", fstat.isdir);
+
+    dir_handler = opendir(list_file);
+    if (dir_handler == -1) {
+        printf("opendir failed. Maybe file does not exit?\n\r");
+        return;
+    }
+
+    printf("opendir handler:%d\n\r", dir_handler);
+    rval = closedir(dir_handler);
+    if (rval == -1) {
+        printf("closedor failed. Maybe file does not exit?\n\r");
+        return;
+    }
+
 }
 
 void cmd_cd(int argc, char *argv[])

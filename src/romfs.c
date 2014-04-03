@@ -15,6 +15,12 @@ struct romfs_file {
     size_t len;
 };
 
+struct romfs_dirent {
+    struct file_metadata_t current_metadata;
+    int ref_count;
+    int is_used;
+};
+
 int romfs_open_recur(int device, char *path, int offset, struct file_metadata_t *file_metadata)
 {
     if (file_metadata->isdir) {
@@ -56,9 +62,23 @@ int romfs_open(int device, char *path, struct file_metadata_t *file_metadata)
     return romfs_open_recur(device, path, 0, file_metadata);
 }
 
+static int find_avail_DIRS(struct romfs_dirent dir[])
+{
+    int i = 0;
+
+    for(i = 0; i < ROMFS_FILE_LIMIT; i ++) {
+        if(dir[i].is_used == 0) {
+            break;
+        }
+    }
+
+    return i;
+}
+
 void romfs_server()
 {
     struct romfs_file files[ROMFS_FILE_LIMIT];
+    struct romfs_dirent DIRS[ROMFS_FILE_LIMIT];
     int nfiles = 0;
     int self = gettid() + 3;
     struct file_metadata_t file_metadata;
@@ -195,6 +215,45 @@ void romfs_server()
                         }
 
                         write(from, &fstat, sizeof(fstat));
+                        write(from, &status, sizeof(status));
+                    } break;
+
+                case FS_CMD_OPENDIR:
+                    {
+                        device = request.device;
+                        from = request.from;
+                        status = -1;
+                        pos = request.pos; /* searching starting position */
+                        pos = romfs_open(request.device, request.path + pos, &file_metadata);
+
+                        if (pos >= 0) { /* Found */
+                            /* Allocate DIRS */
+                            int avail_slot = find_avail_DIRS(DIRS);
+                            if (avail_slot < ROMFS_FILE_LIMIT) {
+                                DIRS[avail_slot].is_used = 1;
+                                DIRS[avail_slot].ref_count = 0;
+                                DIRS[avail_slot].current_metadata = file_metadata;
+                                status = avail_slot;
+                            }
+                        }
+
+                        write(from, &status, sizeof(status));
+                    } break;
+
+                case FS_CMD_CLOSEDIR:
+                    {
+                        int dir_index = request.pos;
+                        from = request.from;
+                        status = -1;
+
+                        /* Done only if index is valid */
+                        if (dir_index < ROMFS_FILE_LIMIT || 
+                                DIRS[dir_index].is_used == 1) {
+                            memset((void *)&DIRS[dir_index], 0x00,
+                                    sizeof(struct romfs_dirent));
+                            status = 0;
+                        }
+
                         write(from, &status, sizeof(status));
                     } break;
 

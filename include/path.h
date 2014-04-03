@@ -9,6 +9,8 @@
 #define PATH_CMD_REGISTER_FS   (4)
 #define PATH_CMD_MOUNT         (5)
 #define PATH_CMD_STAT          (6)
+#define PATH_CMD_OPENDIR       (7)
+#define PATH_CMD_CLOSEDIR      (8)
 
 #define path_write_data(dst, src, len, pos) \
 { \

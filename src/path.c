@@ -3,6 +3,7 @@
 #include "file.h"
 #include "kconfig.h"
 #include "rt_string.h"
+#include "rt_dirent.h"
 #include "syscall.h"
 #include "fs.h"
 
@@ -143,6 +144,67 @@ void pathserver()
                         write(replyfd, &status, INT_SIZE);
                     }
                 } break;
+
+            case PATH_CMD_OPENDIR:
+                {
+                    status = 0;
+                    /* Get file name */
+                    read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
+                    read(PATHSERVER_FD, path, path_len);
+
+                    /* Forward request, response was sent by mounted fs */
+                    for (i = 0; i < nmounts; i++) {
+                        if (*mounts[i].path
+                                && strncmp(path, mounts[i].path,
+                                           strlen(mounts[i].path)) == 0) {
+                            int mlen = strlen(mounts[i].path);
+                            struct fs_request request;
+                            request.cmd = FS_CMD_OPENDIR;
+                            request.from = replyfd;
+                            request.device = mounts[i].dev;
+                            request.pos = mlen; /* search starting position */
+                            memcpy(request.path, &path, path_len);
+                            write(mounts[i].fs, &request, sizeof(request));
+                            break;
+                        }
+                    }
+
+                    /* Not found */
+                    if (i >= nmounts) {
+                        status = -1;
+                        write(replyfd, &status, INT_SIZE);
+                    }
+                } break;
+
+            case PATH_CMD_CLOSEDIR:
+                {
+                    status = 0;
+                    RT_DIR dir = 0;
+                    /* Get file name */
+                    read(PATHSERVER_FD, &dir, sizeof(RT_DIR));
+
+                    /* Forward request, response was sent by mounted fs */
+                    for (i = 0; i < nmounts; i++) {
+                        if (*mounts[i].path
+                                && strncmp(path, mounts[i].path,
+                                           strlen(mounts[i].path)) == 0) {
+                            struct fs_request request;
+                            request.cmd = FS_CMD_CLOSEDIR;
+                            request.from = replyfd;
+                            request.device = mounts[i].dev;
+                            request.pos = (int)dir; /* DIR is the same as int */
+                            write(mounts[i].fs, &request, sizeof(request));
+                            break;
+                        }
+                    }
+
+                    /* Not found */
+                    if (i >= nmounts) {
+                        status = -1;
+                        write(replyfd, &status, sizeof(RT_DIR));
+                    }
+                } break;
+
 
             case PATH_CMD_REGISTER_PATH:
                 read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
