@@ -86,6 +86,12 @@ static int retrieve_next_file_metadata(int device,
         return -1;
     }
 
+    /* / is a special case and its rom_dirent->dir_entry_pos is
+     * sizeof(struct file_metadata_t) */
+    if (rom_dirent->dir_entry_pos != sizeof(struct file_metadata_t)) {
+        rom_dirent->dir_entry_pos += sizeof(struct file_metadata_t);
+    }
+
     /* Move position to next metadata */
     if (rom_dirent->ref_count == 0) {
         lseek(device, rom_dirent->dir_entry_pos, SEEK_SET);
