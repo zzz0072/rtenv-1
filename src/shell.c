@@ -47,6 +47,7 @@ typedef struct {
 *************************/
 extern size_t g_task_count;
 extern struct task_control_block g_tasks[TASK_LIMIT];
+extern int errno;
 
 static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
 static int g_cur_cmd_hist_pos=0;
@@ -458,6 +459,7 @@ void cmd_ls(int argc, char *argv[])
     RT_DIR dir_handler = 0;
     char abs_path[PATH_MAX] = {0};
     char *list_file = g_cwd;
+    struct dirent *p_dirent;
     int rval = 0;
 
     struct stat fstat;
@@ -473,16 +475,14 @@ void cmd_ls(int argc, char *argv[])
         }
     }
 
-    /* test stat */
-    rval = stat(list_file, &fstat);
-    if (rval == -1) {
-        printf("Stat failed. Maybe file does not exit?\n\r");
-        return;
+    /* Make sure path is corrent stat */
+    if (strcmp(list_file, "/") != 0) {
+        rval = stat(list_file, &fstat);
+        if (rval == -1) {
+            printf("Stat failed. Maybe file does not exit?\n\r");
+            return;
+        }
     }
-
-    printf("name:\t%s\n\r", fstat.name);
-    printf("len:\t%d\n\r", fstat.len);
-    printf("isdir:\t%d\n\r", fstat.isdir);
 
     dir_handler = opendir(list_file);
     if (dir_handler == -1) {
@@ -490,7 +490,18 @@ void cmd_ls(int argc, char *argv[])
         return;
     }
 
-    printf("opendir handler:%d\n\r", dir_handler);
+
+    printf("cwd:%s\n\r", g_cwd);
+    printf("dir/file\tsize\tname\n\r", g_cwd);
+    p_dirent = readdir(dir_handler);
+    while(p_dirent) {
+        printf("%s\t\t%d\t%s\n\r", p_dirent->isdir?"(d)":"(f)",
+                                 p_dirent->len,
+                                 p_dirent->name);
+
+        p_dirent = readdir(dir_handler);
+    }
+
     rval = closedir(dir_handler);
     if (rval == -1) {
         printf("closedor failed. Maybe file does not exit?\n\r");

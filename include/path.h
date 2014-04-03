@@ -11,6 +11,7 @@
 #define PATH_CMD_STAT          (6)
 #define PATH_CMD_OPENDIR       (7)
 #define PATH_CMD_CLOSEDIR      (8)
+#define PATH_CMD_READDIR       (9)
 
 #define path_write_data(dst, src, len, pos) \
 { \

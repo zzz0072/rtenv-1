@@ -12,4 +12,5 @@ typedef int RT_DIR;
 
 RT_DIR opendir(const char *name);
 int closedir(RT_DIR dir);
+struct dirent *readdir(RT_DIR dir_handler);
 #endif

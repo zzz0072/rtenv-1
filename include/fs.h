@@ -10,6 +10,7 @@
 #define FS_CMD_STAT     (5)
 #define FS_CMD_OPENDIR  (6)
 #define FS_CMD_CLOSEDIR (7)
+#define FS_CMD_READDIR  (8)
 
 struct fs_request {
     int cmd;

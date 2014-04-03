@@ -32,7 +32,7 @@ RT_DIR opendir(const char *pathname)
     return rval;
 }
 
-int closedir(RT_DIR dir)
+int closedir(RT_DIR dir_handler)
 {
     int cmd = PATH_CMD_CLOSEDIR;
     unsigned int replyfd = gettid() + 3;
@@ -43,7 +43,7 @@ int closedir(RT_DIR dir)
     /* Send request to path server */
     path_write_data(buf, &cmd, INT_SIZE, pos);
     path_write_data(buf, &replyfd, INT_SIZE, pos);
-    path_write_data(buf, &dir, sizeof(RT_DIR), pos);
+    path_write_data(buf, &dir_handler, sizeof(RT_DIR), pos);
 
     write(PATHSERVER_FD, buf, pos);
 
@@ -53,3 +53,29 @@ int closedir(RT_DIR dir)
     return rval;
 }
 
+struct dirent *readdir(RT_DIR dir_handler)
+{
+    int cmd = PATH_CMD_READDIR;
+    int rval = 0;
+    unsigned int replyfd = gettid() + 3;
+    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX];
+    int pos = 0;
+    static struct dirent s_dirent; /* ARR!!! RE-ENTRENT!!!! */
+
+    /* Send request to path server */
+    path_write_data(buf, &cmd, INT_SIZE, pos);
+    path_write_data(buf, &replyfd, INT_SIZE, pos);
+    path_write_data(buf, &dir_handler, sizeof(RT_DIR), pos);
+
+    write(PATHSERVER_FD, buf, pos);
+
+    /* Response */
+    read(replyfd, &s_dirent, sizeof(struct dirent));
+    read(replyfd, &rval, INT_SIZE);
+
+    if (rval < 0) {
+        return 0;
+    }
+
+    return &s_dirent;
+}

@@ -6,6 +6,7 @@
 #include "fs.h"
 #include "file.h"
 #include "rt_string.h"
+#include "rt_dirent.h"
 #include "file_metadata.h"
 
 struct romfs_file {
@@ -17,7 +18,9 @@ struct romfs_file {
 
 struct romfs_dirent {
     struct file_metadata_t current_metadata;
+    int dir_entry_pos;
     int ref_count;
+    int reach_end;
     int is_used;
 };
 
@@ -73,6 +76,39 @@ static int find_avail_DIRS(struct romfs_dirent dir[])
     }
 
     return i;
+}
+
+static int retrieve_next_file_metadata(int device,
+                                      struct romfs_dirent *rom_dirent,
+                                      struct dirent *dirent)
+{
+    if (rom_dirent->reach_end) {
+        return -1;
+    }
+
+    /* Move position to next metadata */
+    if (rom_dirent->ref_count == 0) {
+        lseek(device, rom_dirent->dir_entry_pos, SEEK_SET);
+    }
+    else {
+        lseek(device, rom_dirent->current_metadata.next_pos, SEEK_SET);
+    }
+
+    /* Read next metadata */
+    read(device, &(rom_dirent->current_metadata),
+            sizeof(struct file_metadata_t));
+
+    if (rom_dirent->current_metadata.next_pos == 0) {
+        rom_dirent->reach_end = 1;
+    }
+
+    /* Assign metadata to dirent */
+    rom_dirent->ref_count++;
+    strncpy((char *)dirent->name, (char *)rom_dirent->current_metadata.name,
+            PATH_MAX);
+    dirent->len = rom_dirent->current_metadata.len;
+    dirent->isdir = rom_dirent->current_metadata.isdir;
+    return 1;
 }
 
 void romfs_server()
@@ -223,15 +259,30 @@ void romfs_server()
                         device = request.device;
                         from = request.from;
                         status = -1;
-                        pos = request.pos; /* searching starting position */
-                        pos = romfs_open(request.device, request.path + pos, &file_metadata);
 
-                        if (pos >= 0) { /* Found */
+                        /* / is a special case */
+                        if (strcmp(request.path, "/") == 0) {
+                            /* Get root file_metadata */
+                            lseek(device, 0, SEEK_SET);
+                            read(device, &file_metadata, sizeof(file_metadata));
+                            pos = sizeof(struct file_metadata_t);
+                        }
+                        else {
+                            pos = request.pos; /* searching starting position */
+                            pos = romfs_open(request.device,
+                                             request.path + pos,
+                                             &file_metadata);
+                        }
+
+                        /* Found and is a directory */
+                        if (pos >= 0 && file_metadata.isdir == 1) {
                             /* Allocate DIRS */
                             int avail_slot = find_avail_DIRS(DIRS);
                             if (avail_slot < ROMFS_FILE_LIMIT) {
                                 DIRS[avail_slot].is_used = 1;
                                 DIRS[avail_slot].ref_count = 0;
+                                DIRS[avail_slot].reach_end = 0;
+                                DIRS[avail_slot].dir_entry_pos = pos;
                                 DIRS[avail_slot].current_metadata = file_metadata;
                                 status = avail_slot;
                             }
@@ -256,6 +307,28 @@ void romfs_server()
 
                         write(from, &status, sizeof(status));
                     } break;
+
+                case FS_CMD_READDIR:
+                    {
+                        int dir_index = request.pos;
+                        struct dirent dirent = {0};
+
+                        from = request.from;
+                        device = request.device;
+
+                        status = -1;
+                        /* Done only if index is valid */
+                        if (dir_index < ROMFS_FILE_LIMIT ||
+                                DIRS[dir_index].is_used == 1) {
+                            status = retrieve_next_file_metadata(device,
+                                                              &DIRS[dir_index],
+                                                              &dirent);
+                        }
+
+                        write(from, &dirent, sizeof(struct dirent));
+                        write(from, &status, sizeof(status));
+                    } break;
+
 
                 case FS_CMD_WRITE: /* readonly */
                 default:
