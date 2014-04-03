@@ -431,6 +431,24 @@ static void cat_buf(const char *buf, int buf_size)
         }
     }
 }
+/* return 0 means path itself is a absolute path. 
+ * retrun 1 means abspath was append 
+ * TODO? snprintf */
+static int to_abs_path(const char *path, char * abs_path)
+{
+    /* Append prefix if needed */
+    if (path[0] != '/') {
+        /* / is a special case */
+        if (strlen(g_cwd) > 1) {
+            sprintf(abs_path, "%s/%s", g_cwd, path);
+        }
+        else {
+            sprintf(abs_path, "%s%s", g_cwd, path);
+        }
+        return 1;
+    }
+    return 0;
+}
 /************************
  * Command handlers
 *************************/
@@ -448,15 +466,7 @@ void cmd_ls(int argc, char *argv[])
     if (argc == 2) {
         list_file = argv[1];
 
-        /* Append prefix if needed */
-        if (argv[1][0] != '/') {
-            /* / is a special case */
-            if (strlen(g_cwd) > 1) {
-                sprintf(abs_path, "%s/%s", g_cwd, argv[1]);
-            }
-            else {
-                sprintf(abs_path, "%s%s", g_cwd, argv[1]);
-            }
+        if(to_abs_path(argv[1], abs_path)) {
             list_file = abs_path;
         }
     }
@@ -490,16 +500,7 @@ void cmd_cd(int argc, char *argv[])
     }
 
     /* Append prefix if needed */
-    if (argv[1][0] != '/') {
-        /* / is a special case */
-        if (strlen(g_cwd) > 1) {
-            sprintf(abs_path, "%s/%s", g_cwd, argv[1]);
-        }
-        else {
-            sprintf(abs_path, "%s%s", g_cwd, argv[1]);
-        }
-    }
-    else {
+    if (to_abs_path(argv[1], abs_path) == 0) {
         cd_dir = argv[1];
     }
 
