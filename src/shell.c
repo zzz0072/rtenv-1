@@ -551,6 +551,7 @@ void cmd_cat(int argc, char *argv[])
     char buf[CMDBUF_SIZE];
     char abs_path[PATH_MAX] = {0};
     char *cat_file = abs_path;
+    struct stat fstat;
 
     /* Current only one file*/
     if (argc != 2) {
@@ -561,6 +562,13 @@ void cmd_cat(int argc, char *argv[])
     /* Convert to absolute path if needed */
     if (to_abs_path(argv[1], abs_path) == 0) {
         cat_file = argv[1];
+    }
+
+    /* Is it a file? */
+    stat(cat_file, &fstat);
+    if (fstat.isdir == 1) {
+        printf("You are trying to cat a directory\n\r");
+        return;
     }
 
     /* Open file */
