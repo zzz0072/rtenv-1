@@ -701,7 +701,7 @@ void cmd_history(int argc, char *argv[])
 
     for (i = g_cur_cmd_hist_pos + 1; i <= g_cur_cmd_hist_pos + HISTORY_COUNT; i++) {
         if (g_typed_cmds[i % HISTORY_COUNT][0]) {
-            printf("%s\n\r", g_typed_cmds[i % HISTORY_COUNT]);
+            printf("%s\r", g_typed_cmds[i % HISTORY_COUNT]);
         }
     }
 }
