@@ -9,9 +9,8 @@
 
 
 #define MAX_ALLOCS (128)   /* Max allocate number. Random pick, no reason */
-#define POOL_SIZE (1024*48)   /* Bisection to tried max is 1812. Do not know why.
-                              However, 1812 caused system to hang. Maybe due
-                              to stack will full. So, adjust to 1024 */
+#define POOL_SIZE (1024 * 48)
+
 /* struct to record usage */
 struct mem_usage_t {
     char is_used;
@@ -34,13 +33,18 @@ void init_mpool(void)
 
 void *malloc(size_t size)
 {
-    /* FIXME: Should have a lock here  */
+    /* FIXME: Should have a lock here? */
     int i = 0;
+    int pad = 0;
+
+    /* Do we need to enlarge size for aligment? */
+    pad = size % __BIGGEST_ALIGNMENT__;
+    size = size + pad; /* + 0 may better than branch? */
+
     /* Check total size */
     if (size > POOL_SIZE) {
         return (void *) 0;
     }
-
 
     /* If there is available slot? */
     for (i = 0; i < g_final_slot; i++) {
