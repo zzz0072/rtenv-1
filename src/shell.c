@@ -718,7 +718,7 @@ void shell_task()
     for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
         sprintf(prompt, "%s%s$ ", PROMPT, g_cwd);
         read_str = readline(prompt);
-        if (!read_str) {
+        if (!read_str || read_str[0] == '\n') {
             continue;
         }
 
