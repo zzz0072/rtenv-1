@@ -492,7 +492,7 @@ void cmd_ls(int argc, char *argv[])
 
 
     printf("cwd:%s\n\r", g_cwd);
-    printf("dir/file\tsize\tname\n\r", g_cwd);
+    printf("(d)ir/(f)ile\tsize\tname\n\r", g_cwd);
     p_dirent = readdir(dir_handler);
     while(p_dirent) {
         printf("%s\t\t%d\t%s\n\r", p_dirent->isdir?"(d)":"(f)",
