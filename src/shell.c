@@ -220,7 +220,7 @@ static void run_cmd()
             break;
     }
 
-    for(i = 0; i < argc; i++) {
+    for (i = 0; i < argc; i++) {
         int l = env_var_expand(p, argv[i]);
         argv[i] = p;
         p += l + 1;
@@ -390,15 +390,15 @@ static char *readline(char *prompt)
             *(read_buf + curr_char + 1) = '\0';
             break;
         }
-        else if(ch[0] == ESC) {
+        else if (ch[0] == ESC) {
             last_char_is_ESC = RT_YES;
         }
         /* Skip control characters. man ascii for more information */
         else if (ch[0] < 0x20) {
             continue;
         }
-        else if(ch[0] == BACKSPACE) { /* backspace */
-            if(curr_char > 0) {
+        else if (ch[0] == BACKSPACE) { /* backspace */
+            if (curr_char > 0) {
                 curr_char--;
                 printf("\b \b");
             }
@@ -470,7 +470,7 @@ void cmd_ls(int argc, char *argv[])
     if (argc == 2) {
         list_file = argv[1];
 
-        if(to_abs_path(argv[1], abs_path)) {
+        if (to_abs_path(argv[1], abs_path)) {
             list_file = abs_path;
         }
     }
@@ -494,7 +494,7 @@ void cmd_ls(int argc, char *argv[])
     printf("cwd:%s\n\r", g_cwd);
     printf("(d)ir/(f)ile\tsize\tname\n\r", g_cwd);
     p_dirent = readdir(dir_handler);
-    while(p_dirent) {
+    while (p_dirent) {
         printf("%s\t\t%d\t%s\n\r", p_dirent->isdir?"(d)":"(f)",
                                  p_dirent->len,
                                  p_dirent->name);
@@ -559,7 +559,7 @@ void cmd_cat(int argc, char *argv[])
     }
 
     /* Convert to absolute path if needed */
-    if(to_abs_path(argv[1], abs_path) == 0) {
+    if (to_abs_path(argv[1], abs_path) == 0) {
         cat_file = argv[1];
     }
 
