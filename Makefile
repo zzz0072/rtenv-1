@@ -83,7 +83,7 @@ MK_RULES=$(shell ls mk/*.mk)
 
 #----------------------------------------------------------------------------------
 $(OUT_DIR)/$(TARGET).bin: $(OUT_OBJS) $(ROOTFS_OBJ)
-	$(CROSS_COMPILE)gcc -Wl,-Tsrc/$(TARGET).ld -nostartfiles \
+	$(CROSS_COMPILE)gcc -Wl,-Map=$(OUT_DIR)/$(TARGET).map,-Tsrc/$(TARGET).ld -nostartfiles \
 		$(CFLAGS) $(OUT_OBJS) $(ROOTFS_OBJ) -o $(OUT_DIR)/$(TARGET).elf
 	$(CROSS_COMPILE)objcopy -Obinary $(OUT_DIR)/$(TARGET).elf $@
 	$(CROSS_COMPILE)objdump -S $(OUT_DIR)/$(TARGET).elf > $(OUT_DIR)/$(TARGET).list
