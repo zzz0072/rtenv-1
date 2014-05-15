@@ -6,6 +6,8 @@
 
 void *memcpy(void *dest, const void *src, size_t n);
 void *memset(void *dest, int c, size_t n);
+int   memcmp(const void *s1, const void *s2, size_t n);
+
 void  puts(const char *s);
 void  print(char *msg);
 int printf(const char *format, ...);
@@ -17,7 +19,6 @@ int   strncmp(const char *a, const char *b, size_t n);
 char *strcat(char *dest, const char *src);
 char *strcpy(char *dest, const char *src);
 char *strncpy(char *dest, const char *src, size_t n);
-
 
 /* Warning!! Last atoi buf element needs to be set to \0 */
 /*           for itoa(), htoa() and addrtoa()            */
