@@ -36,14 +36,14 @@ MODULE_DECLARE(romfs, romfs_module_init);
 
 void romfs_module_init()
 {
-    int pid;
+    int tid;
     struct task_control_block *task;
 
-    pid = kernel_create_task(romfs_server);
-    if (pid < 0)
+    tid = kernel_create_task(romfs_server);
+    if (tid < 0)
         return;
 
-    task = task_get(pid);
+    task = task_get(tid);
     task_set_priority(task, 2);
     task_set_stack_size(task, ROMFS_STACK_SIZE);
 }
@@ -93,7 +93,7 @@ int romfs_open(int device, char *path, struct romfs_entry *entry)
 void romfs_server()
 {
     DECLARE_OBJECT_POOL(struct romfs_file, files, ROMFS_FILE_LIMIT);
-    int self = getpid() + 3;
+    int self = gettid() + 3;
     struct romfs_entry entry;
     struct fs_request request;
     int cmd;

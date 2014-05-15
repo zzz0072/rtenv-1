@@ -194,7 +194,7 @@ void check_keyword()
     }
     else if (child) {
         int status;
-        waitpid(child, &status, 0);
+        waittid(child, &status, 0);
     }
     else {
         /* Try full path */

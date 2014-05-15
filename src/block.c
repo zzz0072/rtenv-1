@@ -137,7 +137,7 @@ int block_request_readable(struct block *block, struct file_request *request,
 {
     struct task_control_block *task = request->task;
 
-    if (block->request_pid == 0) {
+    if (block->request_tid == 0) {
         /* try to send request */
         struct file *driver = block->driver_file;
         int size = request->size;
@@ -146,7 +146,7 @@ int block_request_readable(struct block *block, struct file_request *request,
 
         struct block_request block_request = {
             .cmd = BLOCK_CMD_READ,
-            .task = task->pid,
+            .task = task->tid,
             .fd = block->file.fd,
             .size = size,
             .pos = block->pos
@@ -158,11 +158,11 @@ int block_request_readable(struct block *block, struct file_request *request,
             .size = sizeof(block_request),
         };
         if (file_write(driver, &file_request, monitor) == 1) {
-            block->request_pid = task->pid;
+            block->request_tid = task->tid;
             block->buzy = 1;
         }
     }
-    else if (block->request_pid == task->pid && !block->buzy) {
+    else if (block->request_tid == task->tid && !block->buzy) {
         return block_request_read(block, request, monitor);
     }
 
@@ -185,7 +185,7 @@ int block_request_writable(struct block *block, struct file_request *request,
 {
     struct task_control_block *task = request->task;
 
-    if (block->request_pid == 0) {
+    if (block->request_tid == 0) {
         /* try to send request */
         struct file *driver = block->driver_file;
         int size = request->size;
@@ -194,7 +194,7 @@ int block_request_writable(struct block *block, struct file_request *request,
 
         struct block_request block_request = {
             .cmd = BLOCK_CMD_WRITE,
-            .task = task->pid,
+            .task = task->tid,
             .fd = block->file.fd,
             .size = size,
             .pos = block->pos
@@ -210,11 +210,11 @@ int block_request_writable(struct block *block, struct file_request *request,
 
             memcpy(block->buf, request->buf, size);
 
-            block->request_pid = task->pid;
+            block->request_tid = task->tid;
             block->buzy = 1;
         }
     }
-    else if (block->request_pid == task->pid && !block->buzy) {
+    else if (block->request_tid == task->tid && !block->buzy) {
         return block_request_write(block, request, monitor);
     }
 
@@ -227,7 +227,7 @@ int block_request_lseekable(struct block *block, struct file_request *request,
 {
     struct task_control_block *task = request->task;
 
-    if (block->request_pid == 0) {
+    if (block->request_tid == 0) {
         /* try to send request */
         struct file *driver = block->driver_file;
         int size = request->size;
@@ -251,7 +251,7 @@ int block_request_lseekable(struct block *block, struct file_request *request,
 
         struct block_request block_request = {
             .cmd = BLOCK_CMD_SEEK,
-            .task = task->pid,
+            .task = task->tid,
             .fd = block->file.fd,
             .size = request->size,
             .pos = pos,
@@ -264,11 +264,11 @@ int block_request_lseekable(struct block *block, struct file_request *request,
         };
 
         if (file_write(driver, &file_request, monitor) == 1) {
-            block->request_pid = task->pid;
+            block->request_tid = task->tid;
             block->buzy = 1;
         }
     }
-    else if (block->request_pid == task->pid && !block->buzy) {
+    else if (block->request_tid == task->tid && !block->buzy) {
         return block_request_lseek(block, request, monitor);
     }
 
@@ -281,13 +281,13 @@ int block_request_mmap(struct block *block, struct file_request *request,
 {
     struct task_control_block *task = request->task;
 
-    if (block->request_pid == 0) {
+    if (block->request_tid == 0) {
         /* try to send request */
         struct file *driver = block->driver_file;
 
         struct block_request block_request = {
             .cmd = BLOCK_CMD_MMAP,
-            .task = task->pid,
+            .task = task->tid,
             .fd = block->file.fd,
             .size = request->size,
             .pos = request->whence,
@@ -300,12 +300,12 @@ int block_request_mmap(struct block *block, struct file_request *request,
         };
 
         if (file_write(driver, &file_request, monitor) == 1) {
-            block->request_pid = task->pid;
+            block->request_tid = task->tid;
             block->buzy = 1;
         }
     }
-    else if (block->request_pid == task->pid && !block->buzy) {
-        block->request_pid = 0;
+    else if (block->request_tid == task->tid && !block->buzy) {
+        block->request_tid = 0;
         return block->transfer_len;
     }
 
@@ -322,7 +322,7 @@ int block_request_read(struct block *block, struct file_request *request,
         block->pos += block->transfer_len;
     }
 
-    block->request_pid = 0;
+    block->request_tid = 0;
     return block->transfer_len;
 }
 
@@ -333,7 +333,7 @@ int block_request_write(struct block *block, struct file_request *request,
         block->pos += block->transfer_len;
     }
 
-    block->request_pid = 0;
+    block->request_tid = 0;
     return block->transfer_len;
 }
 
@@ -344,7 +344,7 @@ int block_request_lseek(struct block *block, struct file_request *request,
         block->pos = block->transfer_len;
     }
 
-    block->request_pid = 0;
+    block->request_tid = 0;
     return block->transfer_len;
 }
 
@@ -368,7 +368,7 @@ int block_event_release(struct event_monitor *monitor, int event,
     }
 }
 
-int block_init(int fd, int driver_pid, struct file *files[],
+int block_init(int fd, int driver_tid, struct file *files[],
                struct memory_pool *memory_pool, struct event_monitor *monitor)
 {
     struct block *block;
@@ -379,9 +379,9 @@ int block_init(int fd, int driver_pid, struct file *files[],
     if (!block)
         return -1;
 
-    block->driver_pid = driver_pid;
-    block->driver_file = files[driver_pid + 3];
-    block->request_pid = 0;
+    block->driver_tid = driver_tid;
+    block->driver_file = files[driver_tid + 3];
+    block->request_tid = 0;
     block->buzy = 0;
     block->pos = 0;
     block->file.ops = &block_ops;
@@ -418,7 +418,7 @@ int block_readable(struct file *file, struct file_request *request,
                    struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_readable(block, request, monitor);
     }
     else {
@@ -430,7 +430,7 @@ int block_writable(struct file *file, struct file_request *request,
                    struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_writable(block, request, monitor);
     }
     else {
@@ -442,7 +442,7 @@ int block_read(struct file *file, struct file_request *request,
                struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_read(block, request, monitor);
     }
     else {
@@ -454,7 +454,7 @@ int block_write(struct file *file, struct file_request *request,
                 struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_write(block, request, monitor);
     }
     else {
@@ -466,7 +466,7 @@ int block_lseekable(struct file *file, struct file_request *request,
                     struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_lseekable(block, request, monitor);
     }
     else {
@@ -478,7 +478,7 @@ int block_lseek(struct file *file, struct file_request *request,
                 struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_lseek(block, request, monitor);
     }
     else {
@@ -490,7 +490,7 @@ int block_mmap(struct file *file, struct file_request *request,
                struct event_monitor *monitor)
 {
     struct block *block = container_of(file, struct block, file);
-    if (block->driver_pid == request->task->pid) {
+    if (block->driver_tid == request->task->tid) {
         return block_driver_mmap(block, request, monitor);
     }
     else {

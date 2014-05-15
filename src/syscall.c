@@ -23,8 +23,8 @@ int fork(const void *proc_descption)
     SYS_CALL_BODY(TO_STR(SYS_CALL_FORK));
 }
 
-int getpid() __attribute__ ((naked));
-int getpid()
+int gettid() __attribute__ ((naked));
+int gettid()
 {
     SYS_CALL_BODY(TO_STR(SYS_CALL_GETTID));
 }
@@ -89,8 +89,8 @@ void exit(int status)
     SYS_CALL_BODY(TO_STR(SYS_CALL_EXIT));
 }
 
-int waitpid(int pid, int *status, int options) __attribute__ ((naked));
-int waitpid(int pid, int *status, int options)
+int waittid(int tid, int *status, int options) __attribute__ ((naked));
+int waittid(int tid, int *status, int options)
 {
     SYS_CALL_BODY(TO_STR(SYS_CALL_WAITTID));
 }

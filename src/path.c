@@ -33,14 +33,14 @@ DECLARE_OBJECT_POOL(struct path, paths, PATH_LIMIT);
 
 void path_module_init()
 {
-    int pid;
+    int tid;
     struct task_control_block *task;
 
-    pid = kernel_create_task(pathserver);
-    if (pid < 0)
+    tid = kernel_create_task(pathserver);
+    if (tid < 0)
         return;
 
-    task = task_get(pid);
+    task = task_get(tid);
     task_set_priority(task, 0);
     task_set_stack_size(task, PATH_STACK_SIZE);
 }
@@ -305,7 +305,7 @@ void pathserver()
 int path_register(const char *pathname)
 {
     int cmd = PATH_CMD_REGISTER_PATH;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(pathname) + 1;
     int fd = -1;
     char buf[4 + 4 + 4 + PATH_MAX];
@@ -325,7 +325,7 @@ int path_register(const char *pathname)
 int path_deregister(const char *pathname)
 {
     int cmd = PATH_CMD_DEREGISTER_PATH;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(pathname) + 1;
     int fd = -1;
     char buf[4 + 4 + 4 + PATH_MAX];
@@ -345,7 +345,7 @@ int path_deregister(const char *pathname)
 int path_register_fs(const char *type)
 {
     int cmd = PATH_CMD_REGISTER_FS;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(type) + 1;
     int fd = -1;
     char buf[4 + 4 + 4 + PATH_MAX];
@@ -365,7 +365,7 @@ int path_register_fs(const char *type)
 int mount(const char *src, const char *dst, const char *type, int flags)
 {
     int cmd = PATH_CMD_MOUNT;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t slen = strlen(src) + 1;
     size_t dlen = strlen(dst) + 1;
     size_t tlen = strlen(type) + 1;

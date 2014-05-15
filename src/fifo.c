@@ -20,7 +20,7 @@ int mkfifo(const char *pathname, int mode)
 }
 
 int
-fifo_init(int fd, int driver_pid, struct file *files[],
+fifo_init(int fd, int driver_tid, struct file *files[],
           struct memory_pool *memory_pool, struct event_monitor *monitor)
 {
     struct pipe_ringbuffer *pipe;

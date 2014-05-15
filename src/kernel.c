@@ -125,13 +125,13 @@ int kernel_create_task(void *func)
     /* Set PSR to thumb */
     task->stack->xpsr = 1 << 24;
 
-    task->pid = object_pool_find(&tasks, task);
+    task->tid = object_pool_find(&tasks, task);
     task->priority = PRIORITY_DEFAULT;
     task->exit_event = -1;
     list_init(&task->list);
     list_push(&ready_list[task->priority], &task->list);
 
-    return task->pid;
+    return task->tid;
 }
 
 /* System calls */
@@ -167,13 +167,13 @@ void kernel_fork()
     /* Copy only the used part of the stack */
     memcpy(task->stack, current_task->stack, used);
     /* Set PID */
-    task->pid = object_pool_find(&tasks, task);
+    task->tid = object_pool_find(&tasks, task);
     /* Set priority, inherited from forked task */
     task->priority = current_task->priority;
     /* Clear exit event */
     task->exit_event = -1;
     /* Set return values in each process */
-    current_task->stack->r0 = task->pid;
+    current_task->stack->r0 = task->tid;
     task->stack->r0 = 0;
     /* Push to ready list */
     list_init(&task->list);
@@ -259,9 +259,9 @@ void kernel_exec_addr()
     current_task->stack->xpsr = 1 << 24;
 }
 
-void kernel_getpid()
+void kernel_gettid()
 {
-    current_task->stack->r0 = current_task->pid;
+    current_task->stack->r0 = current_task->tid;
 }
 
 void kernel_write()
@@ -269,7 +269,7 @@ void kernel_write()
     /* Check fd is valid */
     int fd = current_task->stack->r0;
     if (fd < FILE_LIMIT && files[fd]) {
-        struct file_request *request = &requests[current_task->pid];
+        struct file_request *request = &requests[current_task->tid];
         /* Prepare file request, store reference in r0 */
         request->task = current_task;
         request->buf = (void *)current_task->stack->r1;
@@ -289,7 +289,7 @@ void kernel_read()
     /* Check fd is valid */
     int fd = current_task->stack->r0;
     if (fd < FILE_LIMIT && files[fd]) {
-        struct file_request *request = &requests[current_task->pid];
+        struct file_request *request = &requests[current_task->tid];
         /* Prepare file request, store reference in r0 */
         request->task = current_task;
         request->buf = (void *)current_task->stack->r1;
@@ -309,7 +309,7 @@ void kernel_lseek()
     /* Check fd is valid */
     int fd = current_task->stack->r0;
     if (fd < FILE_LIMIT && files[fd]) {
-        struct file_request *request = &requests[current_task->pid];
+        struct file_request *request = &requests[current_task->tid];
         /* Prepare file request, store reference in r0 */
         request->task = current_task;
         request->buf = NULL;
@@ -330,7 +330,7 @@ void kernel_mmap()
     /* Check fd is valid */
     int fd = get_syscall_arg(current_task->stack, 5);
     if (fd < FILE_LIMIT && files[fd]) {
-        struct file_request *request = &requests[current_task->pid];
+        struct file_request *request = &requests[current_task->tid];
         /* Prepare file request, store reference in r0 */
         request->task = current_task;
         request->buf = (void *)current_task->stack->r0;
@@ -405,7 +405,7 @@ void kernel_mknod()
 {
     current_task->stack->r0 =
         file_mknod(current_task->stack->r0,
-                   current_task->pid,
+                   current_task->tid,
                    files,
                    current_task->stack->r2,
                    &memory_pool,
@@ -417,7 +417,7 @@ void kernel_rmnod()
     /* Check fd is valid */
     int fd = current_task->stack->r0;
     if (fd < FILE_LIMIT && files[fd]) {
-        struct file_request *request = &requests[current_task->pid];
+        struct file_request *request = &requests[current_task->tid];
         /* Prepare file request, store reference in r0 */
         request->task = current_task;
         current_task->stack->r0 = (int)request;
@@ -468,7 +468,7 @@ void kernel_exit()
 {
     list_remove(&current_task->list);
     stack_pool_free(&stack_pool, current_task->stack_start);
-    current_task->pid = -1;
+    current_task->tid = -1;
     if (current_task->exit_event != -1)
         event_monitor_release(&event_monitor, current_task->exit_event);
     object_pool_free(&tasks, current_task);
@@ -476,12 +476,12 @@ void kernel_exit()
     current_task = NULL;
 }
 
-void kernel_waitpid()
+void kernel_waittid()
 {
     struct task_control_block *task;
-    int pid = current_task->stack->r0;
+    int tid = current_task->stack->r0;
 
-    task = object_pool_get(&tasks, pid);
+    task = object_pool_get(&tasks, tid);
     if (task) {
         if (task->exit_event == -1) {
             /* Allocate if does not have one */
@@ -522,7 +522,7 @@ void kernel_interrupt_handler()
 void (*syscall_table[])() = {
     NULL,
     kernel_fork,
-    kernel_getpid,
+    kernel_gettid,
     kernel_write,
     kernel_read,
     kernel_interrupt_wait,
@@ -534,7 +534,7 @@ void (*syscall_table[])() = {
     kernel_setrlimit,
     kernel_rmnod,
     kernel_exit,
-    kernel_waitpid,
+    kernel_waittid,
     kernel_mmap,
     kernel_exec_addr,
 };
@@ -592,7 +592,7 @@ int main()
     task->stack = (void *)init_task(stack, &first, stack_size);
     task->stack_start = stack;
     task->stack_end = stack + stack_size;
-    task->pid = 0;
+    task->tid = 0;
     task->priority = PRIORITY_DEFAULT;
     task->exit_event = -1;
     list_init(&task->list);
@@ -607,7 +607,7 @@ int main()
         timeup = 0;
 
 #ifdef USE_TASK_STAT_HOOK
-        task_stat_hook(tasks.data, current_task->pid);
+        task_stat_hook(tasks.data, current_task->tid);
 #endif /* USE_TASK_STAT_HOOK */
 
         /* Handle system call */

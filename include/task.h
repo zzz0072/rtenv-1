@@ -39,7 +39,7 @@ struct task_control_block {
     struct user_thread_stack *stack;
     void *stack_start;
     void *stack_end;
-    int pid;
+    int tid;
     int status;
     int priority;
     int exit_event;
@@ -48,7 +48,7 @@ struct task_control_block {
 };
 
 unsigned int *init_task(unsigned int *stack, void (*start)(), size_t stack_size);
-struct task_control_block *task_get(int pid);
+struct task_control_block *task_get(int tid);
 int task_set_priority(struct task_control_block *task, int priority);
 int task_set_stack_size(struct task_control_block *task, size_t size);
 

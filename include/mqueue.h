@@ -4,7 +4,7 @@
 #include "file.h"
 #include "memory-pool.h"
 
-int mq_init(int fd, int driver_pid, struct file *files[],
+int mq_init(int fd, int driver_tid, struct file *files[],
             struct memory_pool *memory_pool, struct event_monitor *monitor);
 int mq_deinit (struct file *file, struct file_request *request,
                struct event_monitor *monitor);

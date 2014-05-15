@@ -24,14 +24,14 @@ MODULE_DECLARE(binfs, binfs_module_init);
 
 void binfs_module_init()
 {
-    int pid;
+    int tid;
     struct task_control_block *task;
 
-    pid = kernel_create_task(binfs_server);
-    if (pid < 0)
+    tid = kernel_create_task(binfs_server);
+    if (tid < 0)
         return;
 
-    task = task_get(pid);
+    task = task_get(tid);
     task_set_priority(task, 1);
 }
 
@@ -153,7 +153,7 @@ void binfs_server()
     int self;
     struct fs_request request;
 
-    self = getpid() + 3;
+    self = gettid() + 3;
 
     path_register_fs("binfs");
 

@@ -13,7 +13,7 @@
 int mkfile(const char *pathname, int mode, int dev)
 {
     int cmd = PATH_CMD_MKFILE;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(pathname) + 1;
     char buf[4 + 4 + 4 + PATH_MAX + 4];
     (void) mode;
@@ -35,7 +35,7 @@ int mkfile(const char *pathname, int mode, int dev)
 int open(const char *pathname, int flags)
 {
     int cmd = PATH_CMD_OPEN;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     size_t plen = strlen(pathname) + 1;
     unsigned int fd = -1;
     char buf[4 + 4 + 4 + PATH_MAX];
@@ -56,7 +56,7 @@ int open(const char *pathname, int flags)
 int close(int fd)
 {
     int cmd = PATH_CMD_CLOSE;
-    unsigned int replyfd = getpid() + 3;
+    unsigned int replyfd = gettid() + 3;
     int status = -1;
     char buf[4 + 4 + 4];
     int pos = 0;
@@ -154,22 +154,22 @@ int file_write(struct file *file, struct file_request *request,
 }
 
 int
-file_mknod(int fd, int driver_pid, struct file *files[], int dev,
+file_mknod(int fd, int driver_tid, struct file *files[], int dev,
            struct memory_pool *memory_pool, struct event_monitor *event_monitor)
 {
     int result;
     switch (dev) {
     case S_IFIFO:
-        result = fifo_init(fd, driver_pid, files, memory_pool, event_monitor);
+        result = fifo_init(fd, driver_tid, files, memory_pool, event_monitor);
         break;
     case S_IMSGQ:
-        result = mq_init(fd, driver_pid, files, memory_pool, event_monitor);
+        result = mq_init(fd, driver_tid, files, memory_pool, event_monitor);
         break;
     case S_IFBLK:
-        result = block_init(fd, driver_pid, files, memory_pool, event_monitor);
+        result = block_init(fd, driver_tid, files, memory_pool, event_monitor);
         break;
     case S_IFREG:
-        result = regfile_init(fd, driver_pid, files, memory_pool, event_monitor);
+        result = regfile_init(fd, driver_tid, files, memory_pool, event_monitor);
         break;
     default:
         result = -1;

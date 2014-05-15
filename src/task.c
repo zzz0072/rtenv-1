@@ -12,11 +12,11 @@ unsigned int *init_task(unsigned int *stack, void (*start)(),
     return stack;
 }
 
-struct task_control_block *task_get(int pid)
+struct task_control_block *task_get(int tid)
 {
     extern struct object_pool tasks;
 
-    return object_pool_get(&tasks, pid);
+    return object_pool_get(&tasks, tid);
 }
 
 int task_set_priority(struct task_control_block *task, int priority)

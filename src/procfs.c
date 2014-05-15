@@ -16,7 +16,7 @@
 
 struct procfs_file {
     int fd;
-    int pid;
+    int tid;
     int status;
     int priority;
 };
@@ -29,14 +29,14 @@ MODULE_DECLARE(procfs, procfs_module_init);
 
 void procfs_module_init()
 {
-    int pid;
+    int tid;
     struct task_control_block *task;
 
-    pid = kernel_create_task(procfs_server);
-    if (pid < 0)
+    tid = kernel_create_task(procfs_server);
+    if (tid < 0)
         return;
 
-    task = task_get(pid);
+    task = task_get(tid);
     task_set_priority(task, 2);
     task_set_stack_size(task, PROCFS_STACK_SIZE);
 }
@@ -53,16 +53,16 @@ void procfs_server()
     int target;
     int pos;
     int size;
-    int pid;
+    int tid;
     int status;
     const char *filename;
     void *data;
-    int data_start = offsetof(struct procfs_file, pid);
+    int data_start = offsetof(struct procfs_file, tid);
     int data_len = sizeof(struct procfs_file) - data_start;
     struct procfs_file *file;
     struct object_pool_cursor cursor;
 
-    self = getpid() + 3;
+    self = gettid() + 3;
 
     path_register_fs(PROCFS_TYPE);
 
@@ -76,14 +76,14 @@ void procfs_server()
 
                 status = -1;
 
-                /* Get pid */
+                /* Get tid */
                 filename = request.path + pos;
                 if (*filename == '-' || ('0' <= *filename && *filename <= '9'))
-                    pid = atoi(request.path + pos);
+                    tid = atoi(request.path + pos);
                 else
-                    pid = TASK_LIMIT;
+                    tid = TASK_LIMIT;
 
-                if (pid < TASK_LIMIT && tasks[pid].pid == pid) {
+                if (tid < TASK_LIMIT && tasks[tid].tid == tid) {
                     /* Get filename */
 
                     while (*filename && *filename != '/')
@@ -101,9 +101,9 @@ void procfs_server()
                                     file = object_pool_allocate(&files);
                                     if (file) {
                                         file->fd = status;
-                                        file->pid = tasks[pid].pid;
-                                        file->status = tasks[pid].status;
-                                        file->priority = tasks[pid].priority;
+                                        file->tid = tasks[tid].tid;
+                                        file->status = tasks[tid].status;
+                                        file->priority = tasks[tid].priority;
                                     }
                                 }
                                 else {

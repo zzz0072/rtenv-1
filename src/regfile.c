@@ -149,7 +149,7 @@ int regfile_request_readable(struct regfile *regfile,
 {
     struct task_control_block *task = request->task;
 
-    if (regfile->request_pid == -1) {
+    if (regfile->request_tid == -1) {
         /* try to send request */
         struct file *driver = regfile->driver_file;
         int size = request->size;
@@ -158,7 +158,7 @@ int regfile_request_readable(struct regfile *regfile,
 
         struct fs_request fs_request = {
             .cmd = FS_CMD_READ,
-            .from = task->pid,
+            .from = task->tid,
             .target = regfile->file.fd,
             .size = size,
             .pos = regfile->pos
@@ -170,11 +170,11 @@ int regfile_request_readable(struct regfile *regfile,
             .size = sizeof(fs_request),
         };
         if (file_write(driver, &file_request, monitor) == 1) {
-            regfile->request_pid = task->pid;
+            regfile->request_tid = task->tid;
             regfile->buzy = 1;
         }
     }
-    else if (regfile->request_pid == task->pid && !regfile->buzy) {
+    else if (regfile->request_tid == task->tid && !regfile->buzy) {
         return regfile_request_read(regfile, request, monitor);
     }
 
@@ -198,7 +198,7 @@ int regfile_request_writable(struct regfile *regfile,
 {
     struct task_control_block *task = request->task;
 
-    if (regfile->request_pid == -1) {
+    if (regfile->request_tid == -1) {
         /* try to send request */
         struct file *driver = regfile->driver_file;
         int size = request->size;
@@ -207,7 +207,7 @@ int regfile_request_writable(struct regfile *regfile,
 
         struct fs_request fs_request = {
             .cmd = FS_CMD_WRITE,
-            .from = task->pid,
+            .from = task->tid,
             .target = regfile->file.fd,
             .size = size,
             .pos = regfile->pos
@@ -223,11 +223,11 @@ int regfile_request_writable(struct regfile *regfile,
 
             memcpy(regfile->buf, request->buf, size);
 
-            regfile->request_pid = task->pid;
+            regfile->request_tid = task->tid;
             regfile->buzy = 1;
         }
     }
-    else if (regfile->request_pid == task->pid && !regfile->buzy) {
+    else if (regfile->request_tid == task->tid && !regfile->buzy) {
         return regfile_request_write(regfile, request, monitor);
     }
 
@@ -241,7 +241,7 @@ int regfile_request_lseekable(struct regfile *regfile,
 {
     struct task_control_block *task = request->task;
 
-    if (regfile->request_pid == -1) {
+    if (regfile->request_tid == -1) {
         /* try to send request */
         struct file *driver = regfile->driver_file;
         int size = request->size;
@@ -265,7 +265,7 @@ int regfile_request_lseekable(struct regfile *regfile,
 
         struct fs_request fs_request = {
             .cmd = FS_CMD_SEEK,
-            .from = task->pid,
+            .from = task->tid,
             .target = regfile->file.fd,
             .size = request->size,
             .pos = pos,
@@ -278,11 +278,11 @@ int regfile_request_lseekable(struct regfile *regfile,
         };
 
         if (file_write(driver, &file_request, monitor) == 1) {
-            regfile->request_pid = task->pid;
+            regfile->request_tid = task->tid;
             regfile->buzy = 1;
         }
     }
-    else if (regfile->request_pid == task->pid && !regfile->buzy) {
+    else if (regfile->request_tid == task->tid && !regfile->buzy) {
         return regfile_request_lseek(regfile, request, monitor);
     }
 
@@ -296,13 +296,13 @@ int regfile_request_mmap(struct regfile *regfile,
 {
     struct task_control_block *task = request->task;
 
-    if (regfile->request_pid == -1) {
+    if (regfile->request_tid == -1) {
         /* try to send request */
         struct file *driver = regfile->driver_file;
 
         struct fs_request fs_request = {
             .cmd = FS_CMD_MMAP,
-            .from = task->pid,
+            .from = task->tid,
             .target = regfile->file.fd,
             .size = request->size,
             .pos = request->whence,
@@ -315,12 +315,12 @@ int regfile_request_mmap(struct regfile *regfile,
         };
 
         if (file_write(driver, &file_request, monitor) == 1) {
-            regfile->request_pid = task->pid;
+            regfile->request_tid = task->tid;
             regfile->buzy = 1;
         }
     }
-    else if (regfile->request_pid == task->pid && !regfile->buzy) {
-        regfile->request_pid = -1;
+    else if (regfile->request_tid == task->tid && !regfile->buzy) {
+        regfile->request_tid = -1;
         return regfile->transfer_len;
     }
 
@@ -337,7 +337,7 @@ int regfile_request_read(struct regfile *regfile, struct file_request *request,
         regfile->pos += regfile->transfer_len;
     }
 
-    regfile->request_pid = -1;
+    regfile->request_tid = -1;
     return regfile->transfer_len;
 }
 
@@ -349,7 +349,7 @@ int regfile_request_write(struct regfile *regfile,
         regfile->pos += regfile->transfer_len;
     }
 
-    regfile->request_pid = -1;
+    regfile->request_tid = -1;
     return regfile->transfer_len;
 }
 
@@ -361,7 +361,7 @@ int regfile_request_lseek(struct regfile *regfile,
         regfile->pos = regfile->transfer_len;
     }
 
-    regfile->request_pid = -1;
+    regfile->request_tid = -1;
     return regfile->transfer_len;
 }
 
@@ -385,7 +385,7 @@ int regfile_event_release(struct event_monitor *monitor, int event,
     }
 }
 
-int regfile_init(int fd, int driver_pid, struct file *files[],
+int regfile_init(int fd, int driver_tid, struct file *files[],
                  struct memory_pool *memory_pool, struct event_monitor *monitor)
 {
     struct regfile *regfile;
@@ -396,9 +396,9 @@ int regfile_init(int fd, int driver_pid, struct file *files[],
     if (!regfile)
         return -1;
 
-    regfile->driver_pid = driver_pid;
-    regfile->driver_file = files[driver_pid + 3];
-    regfile->request_pid = -1;
+    regfile->driver_tid = driver_tid;
+    regfile->driver_file = files[driver_tid + 3];
+    regfile->request_tid = -1;
     regfile->buzy = 0;
     regfile->pos = 0;
     regfile->file.ops = &regfile_ops;
@@ -435,7 +435,7 @@ int regfile_readable(struct file *file, struct file_request *request,
                      struct event_monitor *monitor)
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_readable(regfile, request, monitor);
     }
     else {
@@ -447,7 +447,7 @@ int regfile_writable(struct file *file, struct file_request *request,
                      struct event_monitor *monitor)
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_writable(regfile, request, monitor);
     }
     else {
@@ -459,7 +459,7 @@ int regfile_read(struct file *file, struct file_request *request,
                  struct event_monitor *monitor)
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_read(regfile, request, monitor);
     }
     else {
@@ -471,7 +471,7 @@ int regfile_write(struct file *file, struct file_request *request,
                   struct event_monitor *monitor)
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_write(regfile, request, monitor);
     }
     else {
@@ -484,7 +484,7 @@ int regfile_lseekable(struct file *file, struct file_request *request,
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
 
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_lseekable(regfile, request, monitor);
     }
     else {
@@ -497,7 +497,7 @@ int regfile_lseek(struct file *file, struct file_request *request,
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
 
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_lseek(regfile, request, monitor);
     }
     else {
@@ -509,7 +509,7 @@ int regfile_mmap(struct file *file, struct file_request *request,
                  struct event_monitor *monitor)
 {
     struct regfile *regfile = container_of(file, struct regfile, file);
-    if (regfile->driver_pid == request->task->pid) {
+    if (regfile->driver_tid == request->task->tid) {
         return regfile_driver_mmap(regfile, request, monitor);
     }
     else {

@@ -13,14 +13,14 @@ MODULE_DECLARE(romdev, romdev_module_init);
 
 void romdev_module_init()
 {
-    int pid;
+    int tid;
     struct task_control_block *task;
 
-    pid = kernel_create_task(romdev_driver);
-    if (pid < 0)
+    tid = kernel_create_task(romdev_driver);
+    if (tid < 0)
         return;
 
-    task = task_get(pid);
+    task = task_get(tid);
     task_set_priority(task, 1);
 }
 
@@ -39,7 +39,7 @@ void romdev_driver()
     size_t request_len;
 
     /* Register path for device */
-    self = getpid() + 3;
+    self = gettid() + 3;
     fd = path_register(ROMDEV_PATH);
     mknod(fd, 0, S_IFBLK);
 

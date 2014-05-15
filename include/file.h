@@ -56,7 +56,7 @@ int file_read(struct file *file, struct file_request *request,
               struct event_monitor *monitor);
 int file_write(struct file *file, struct file_request *request,
                struct event_monitor *monitor);
-int file_mknod(int fd, int driver_pid, struct file *files[], int dev,
+int file_mknod(int fd, int driver_tid, struct file *files[], int dev,
                struct memory_pool *memory_pool,
                struct event_monitor *event_monitor);
 int file_rmnod(struct file *file, struct file_request *request,
