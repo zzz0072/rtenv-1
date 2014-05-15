@@ -788,7 +788,7 @@ typedef struct
 typedef struct
 {
   __IO uint32_t IDCODE;
-  __IO uint32_t CR;	
+  __IO uint32_t CR;
 }DBGMCU_TypeDef;
 
 /**

@@ -42,7 +42,7 @@
 #define PATH_LIMIT (FILE_LIMIT - TASK_LIMIT - 3)
 #define PATH_MAX   32 /* Longest absolute path */
 #define PATHSERVER_FD (TASK_LIMIT + 3)
-	/* File descriptor of pipe to pathserver */
+    /* File descriptor of pipe to pathserver */
 /* File system type and Mount point */
 #define FS_LIMIT 8
 #define FS_TYPE_MAX 8
