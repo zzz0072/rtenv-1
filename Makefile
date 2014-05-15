@@ -63,7 +63,7 @@ DEPS   = $(OUT_OBJS:.o=.d)
 DEBUG_FLAGS = -g3 $(UNIT_TEST)
 
 CFLAGS += $(DEBUG_FLAGS)
-CFLAGS += -Wall -Werror -MMD $(INCS)
+CFLAGS += -Wall -Werror -MMD $(INCS) -std=c99
 CFLAGS += -DUSER_NAME=\"$(USER)\"
 CFLAGS += -fno-common -ffreestanding -O0
 

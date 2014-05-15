@@ -24,6 +24,11 @@
 #define INTR_EVENT_REVERSE(event) ((event) - FILE_LIMIT - 15)
 #define TIME_EVENT (FILE_LIMIT + INTR_LIMIT)
 
+extern inline void task_stat_hook(struct task_control_block tasks[],
+                           int current_task) {
+    /* Debugger hook */
+}
+
 int intr_release(struct event_monitor *monitor, int event,
                  struct task_control_block *task, void *data)
 {

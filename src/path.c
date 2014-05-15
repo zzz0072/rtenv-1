@@ -45,7 +45,7 @@ void path_module_init()
     task_set_stack_size(task, PATH_STACK_SIZE);
 }
 
-inline int path_get_fd(struct object_pool *paths, struct path *path)
+extern inline int path_get_fd(struct object_pool *paths, struct path *path)
 {
     int i = object_pool_find(paths, path);
 
@@ -55,7 +55,7 @@ inline int path_get_fd(struct object_pool *paths, struct path *path)
         return -1;
 }
 
-inline struct path *path_get_by_fd(struct object_pool *paths, int fd)
+extern inline struct path *path_get_by_fd(struct object_pool *paths, int fd)
 {
     return object_pool_get(paths, fd - 3 - TASK_LIMIT);
 }
