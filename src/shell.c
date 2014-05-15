@@ -1,123 +1,136 @@
-#include <stddef.h>
-#include <ctype.h>
-#include <string.h>
-#include "file.h"
-#include "rt_string.h"
-#include "rt_dirent.h"
-#include "syscall.h"
-#include "malloc.h"
 #include "shell.h"
 
-/* Internal defines */
-#define PROMPT USER_NAME "@" USER_NAME "-STM32:"
+#include <stddef.h>
+#include "mqueue.h"
+#include "syscall.h"
+#include <ctype.h>
+#include "string.h"
+#include "program.h"
+#include "stdlib.h"
 
-#define BACKSPACE (127)
-#define ESC        (27)
-#define SPACE      (32)
+#define MAX_CMDNAME 19
+#define MAX_ARGC 19
+#define MAX_CMDHELP 1023
+#define HISTORY_COUNT 8
+#define CMDBUF_SIZE 64
+#define MAX_ENVCOUNT 16
+#define MAX_ENVNAME 15
+#define MAX_ENVVALUE 63
 
-#define RT_NO  (0)
-#define RT_YES (1)
+/*Global Variables*/
+char next_line[3] = {'\n', '\r', '\0'};
+char cmd[HISTORY_COUNT][CMDBUF_SIZE];
+int cur_his = 0;
+int fdout;
+int fdin;
+
+void check_keyword();
+void find_events();
+int fill_arg(char *const dest, const char *argv);
+void itoa(int n, char *dst, int base);
+void write_blank(int blank_num);
+void serial_test_task();
+void shell_init();
 
 /* Command handlers. */
-void cmd_export(int argc, char *argv[]);
-void cmd_echo(int argc, char *argv[]);
-void cmd_help(int argc, char *argv[]);
-void cmd_ps(int argc, char *argv[]);
-void cmd_man(int argc, char *argv[]);
-void cmd_history(int argc, char *argv[]);
-void cmd_cat(int argc, char *argv[]);
-void cmd_ls(int argc, char *argv[]);
-void cmd_cd(int argc, char *argv[]);
+void export_envvar(int argc, char *argv[]);
+void show_echo(int argc, char *argv[]);
+void show_cmd_info(int argc, char *argv[]);
+void show_task_info(int argc, char *argv[]);
+void show_man_page(int argc, char *argv[]);
+void show_history(int argc, char *argv[]);
+void show_xxd(int argc, char *argv[]);
 
-/**************************
- * Internal data structures
-***************************/
+/* Enumeration for command types. */
+enum {
+    CMD_EXPORT,
+    CMD_HELP,
+    CMD_HISTORY,
+    CMD_MAN,
+    CMD_COUNT
+} CMD_TYPE;
 /* Structure for command handler. */
 typedef struct {
     char cmd[MAX_CMDNAME + 1];
-    void (*func)(int, char**);
-    char desc[MAX_CMDHELP + 1];
+    void (*func)(int, char **);
+    char description[MAX_CMDHELP + 1];
 } hcmd_entry;
-
-#define ADD_CMD(cmd_name, msg) \
-    {.cmd = #cmd_name, .func=cmd_##cmd_name, .desc=msg}
-
-/************************
- * Global variables
-*************************/
-extern size_t g_task_count;
-extern struct task_control_block g_tasks[TASK_LIMIT];
-extern int errno;
-
-static char g_typed_cmds[HISTORY_COUNT][CMDBUF_SIZE];
-static int g_cur_cmd_hist_pos=0;
-static int g_env_var_count = 0;
-
-static const hcmd_entry g_available_cmds[] = {
-    ADD_CMD(history, "List commands you typed"),
-    ADD_CMD(export,  "Export variables to enviorment. Usage: VAR=VALUE"),
-    ADD_CMD(echo,    "echo your string"),
-    ADD_CMD(help,    "List avaialbe commands"),
-    ADD_CMD(man,     "manaual for commands"),
-    ADD_CMD(ps,      "List task information"),
-    ADD_CMD(cat,     "dump file to serial out"),
-    ADD_CMD(ls,      "list file in rootfs. ex: ls or ls /"),
-    ADD_CMD(cd,      "change dir, will list current working dir if no argument"),
+const hcmd_entry cmd_data[CMD_COUNT] = {
+    [CMD_EXPORT] = {.cmd = "export", .func = export_envvar, .description = "Export environment variables."},
+    [CMD_HELP] = {.cmd = "help", .func = show_cmd_info, .description = "List all commands you can use."},
+    [CMD_HISTORY] = {.cmd = "history", .func = show_history, .description = "Show latest commands entered."},
+    [CMD_MAN] = {.cmd = "man", .func = show_man_page, .description = "Manual pager."},
 };
 
-static evar_entry g_env_var[MAX_ENVCOUNT];
+/* Structure for environment variables. */
+typedef struct {
+    char name[MAX_ENVNAME + 1];
+    char value[MAX_ENVVALUE + 1];
+} evar_entry;
+evar_entry env_var[MAX_ENVCOUNT];
+int env_count = 0;
 
-static char g_cwd[PATH_MAX] = "/"; /* Current working directory */
-#define CMD_COUNT (sizeof(g_available_cmds)/sizeof(hcmd_entry))
-/************************
- * Internal functions
-*************************/
-static void hist_expand()
+
+PROGRAM_DECLARE(shell, shell_init);
+
+
+void shell_init()
 {
-    char buf[CMDBUF_SIZE];
-    char *p = g_typed_cmds[g_cur_cmd_hist_pos];
-    char *q;
-    int i;
+    struct rlimit rlimit = {
+        .rlim_cur = 512 * 4
+    };
 
-    /* ex: 'help' in g_typed_cmds[] can be run in !h, !he, !hel at command line */
-    for (; *p; p++) {
-        /* loop until first ! */
-        if (*p != '!') {
-            continue;
-        }
+    setrlimit(RLIMIT_STACK, &rlimit);
+    serial_test_task();
+}
 
-        /* Skip white spaces */
-        q = p;
-        while (*q && !isspace((unsigned char)*q)) {
-            q++;
-        }
+void serial_test_task()
+{
+    char put_ch[2] = {'0', '\0'};
+    char hint[] =  USER_NAME "@" USER_NAME "-STM32:~$ ";
+    int hint_length = sizeof(hint);
+    char *p = NULL;
 
-        /* since we have !, so start partial comparison */
-        for (i = g_cur_cmd_hist_pos + HISTORY_COUNT - 1; i > g_cur_cmd_hist_pos; i--) {
-            if (!strncmp(g_typed_cmds[i % HISTORY_COUNT], p + 1, q - p - 1)) {
-                strcpy(buf, q);
-                strcpy(p, g_typed_cmds[i % HISTORY_COUNT]);
-                p += strlen(p);
-                strcpy(p--, buf);
-                return;
+    while ((fdout = mq_open("/tmp/mqueue/out", 0)) < 0)
+        sleep(1);
+    while ((fdin = open("/dev/tty0/in", 0)) < 0)
+        sleep(1);
+
+    for (;; cur_his = (cur_his + 1) % HISTORY_COUNT) {
+        p = cmd[cur_his];
+        write(fdout, hint, hint_length);
+
+        while (1) {
+            read(fdin, put_ch, 1);
+
+            if (put_ch[0] == '\r' || put_ch[0] == '\n') {
+                *p = '\0';
+                write(fdout, next_line, 3);
+                break;
+            }
+            else if (put_ch[0] == 127 || put_ch[0] == '\b') {
+                if (p > cmd[cur_his]) {
+                    p--;
+                    write(fdout, "\b \b", 4);
+                }
+            }
+            else if (p - cmd[cur_his] < CMDBUF_SIZE - 1) {
+                *p++ = put_ch[0];
+                write(fdout, put_ch, 2);
             }
         }
+        check_keyword();
     }
 }
 
 /* Split command into tokens. */
-/* Kind of strtok, first call with string then null
- * parameter after first call untill cmdtok returns
- * null */
-static char *cmdtok(char *cmd)
+char *cmdtok(char *cmd)
 {
     static char *cur = NULL;
     static char *end = NULL;
     if (cmd) {
         char quo = '\0';
         cur = cmd;
-
-        /* Separate tokens */
         for (end = cmd; *end; end++) {
             if (*end == '\'' || *end == '\"') {
                 if (quo == *end)
@@ -126,87 +139,29 @@ static char *cmdtok(char *cmd)
                     quo = *end;
                 *end = '\0';
             }
-            else if (isspace((unsigned char)*end) && !quo)
+            else if (isspace((int)*end) && !quo)
                 *end = '\0';
         }
     }
-    else {
-        /* Get next token */
+    else
         for (; *cur; cur++)
             ;
-    }
 
     for (; *cur == '\0'; cur++)
         if (cur == end) return NULL;
     return cur;
 }
 
-static char *get_env_var_val(const char *name)
+void check_keyword()
 {
-    int i;
-
-    for (i = 0; i < g_env_var_count; i++) {
-        if (!strcmp(g_env_var[i].name, name))
-            return g_env_var[i].value;
-    }
-
-    return NULL;
-}
-
-/* Fill in entire value of argument. */
-static int env_var_expand(char *const dest, const char *argv)
-{
-    char env_var_name[MAX_ENVNAME + 1];
-    char *buf = dest;
-    char *p = NULL;
-
-    for (; *argv; argv++) {
-        if (isalnum((unsigned char)*argv) || *argv == '_') {
-            if (p)
-                *p++ = *argv;
-            else
-                *buf++ = *argv;
-        }
-        else { /* Symbols. */
-            if (p) {
-                *p = '\0';
-                p = get_env_var_val(env_var_name);
-                if (p) {
-                    strcpy(buf, p);
-                    buf += strlen(p);
-                    p = NULL;
-                }
-            }
-            if (*argv == '$')
-                p = env_var_name;
-            else
-                *buf++ = *argv;
-        }
-    }
-    if (p) {
-        *p = '\0';
-        p = get_env_var_val(env_var_name);
-        if (p) {
-            strcpy(buf, p);
-            buf += strlen(p);
-        }
-    }
-    *buf = '\0';
-
-    return buf - dest;
-}
-
-static void run_cmd()
-{
-    char *argv[MAX_ARGC + 1] = {NULL};
+    char *argv[1 + MAX_ARGC + 1] = {NULL};
     char cmdstr[CMDBUF_SIZE];
-    char buffer[CMDBUF_SIZE * MAX_ENVVALUE / 2 + 1];
-    char *p = buffer;
     int argc = 1;
     int i;
+    char path[PATH_MAX + 1];
 
-    hist_expand();
-    strcpy(cmdstr, g_typed_cmds[g_cur_cmd_hist_pos]);
+    find_events();
+    fill_arg(cmdstr, cmd[cur_his]);
     argv[0] = cmdtok(cmdstr);
     if (!argv[0])
         return;
@@ -219,385 +174,129 @@ static void run_cmd()
         if (argc >= MAX_ARGC)
             break;
     }
-
-    for (i = 0; i < argc; i++) {
-        int l = env_var_expand(p, argv[i]);
-        argv[i] = p;
-        p += l + 1;
-    }
+    argv[argc] = NULL;
 
     for (i = 0; i < CMD_COUNT; i++) {
-        if (!strcmp(argv[0], g_available_cmds[i].cmd)) {
-            g_available_cmds[i].func(argc, argv);
+        if (!strcmp(argv[0], cmd_data[i].cmd)) {
+            cmd_data[i].func(argc, argv);
             break;
         }
     }
-    if (i == CMD_COUNT) {
-        printf("%s: command not found\n\r", argv[0]);
-    }
-}
-
-static char* retrieve_hist_cmd(char key_val,
-                               char *buf,
-                               unsigned int buf_size,
-                               char is_first_arrow_key)
-{
-    /* Get last command: at this pointer, g_cur_cmd_hist_pos is still empty */
-    int new_cmd_hist_pos = g_cur_cmd_hist_pos - 1;
-    int previous_cmd = new_cmd_hist_pos;
-
-    /* Regular checking */
-    if (g_typed_cmds[g_cur_cmd_hist_pos - 1][0] == 0 ||
-            buf == 0 || buf_size == 0) {
-        return 0;
-    }
-
-    /* Leverage history */
-    if (key_val == 'A') { /* Up key */
-        if (is_first_arrow_key == RT_NO) {
-            new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT - 1) % HISTORY_COUNT;
-        }
-
-        if (g_typed_cmds[new_cmd_hist_pos][0] == 0) {
-            return 0;
-        }
-    }
-    else if (key_val == 'B') { /* Down key */
-        /* Do we need to update history position? */
-        if (is_first_arrow_key == RT_NO) {
-            new_cmd_hist_pos = (new_cmd_hist_pos + HISTORY_COUNT + 1) % HISTORY_COUNT;
-        }
-
-        if (g_typed_cmds[new_cmd_hist_pos][0] == 0) {
-            return 0;
-        }
-    }
-
-    memset(buf, 0x00, buf_size);
-    /* skip \n in history buffer */
-    strncpy(buf, g_typed_cmds[new_cmd_hist_pos],
-            strlen(g_typed_cmds[new_cmd_hist_pos]) - 1);
-
-    if (is_first_arrow_key == RT_YES) {
-        is_first_arrow_key = RT_NO;
-    }
-
-    g_cur_cmd_hist_pos = new_cmd_hist_pos + 1;
-
-    /* previous cmmand is used to clean up unused char to fix
-     * history -> ps, and console showed psstory */
-    return g_typed_cmds[previous_cmd];
-}
-
-
-static char *readline(char *prompt)
-{
-    int fdin;
-    char ch[] = {0x00, 0x00};
-    char last_char_is_ESC = RT_NO;
-    char is_first_arrow_key = RT_YES;
-    int curr_char;
-    size_t rval = 0;
-    char *read_buf = (char *)malloc(CMDBUF_SIZE);
-
-    if (read_buf == 0) {
-        return 0;
-    }
-
-    fdin = open("/dev/tty0/in", 0);
-    curr_char = 0;
-
-    printf("%s", prompt);
-    while(1) {
-        /* Receive a byte from the RS232 port (this call will
-         * block). */
-        rval = read(fdin, &ch[0], 1);
-        if (rval == -1) {
-            printf("Read errror... \n\r");
-            return 0;
-        }
-
-        /* Handle ESC case first */
-        if (last_char_is_ESC == RT_YES) {
-            last_char_is_ESC = RT_NO;
-
-            if (ch[0] == '[') {
-                char *previous_cmd = 0;
-
-                /* Direction key: ESC[A ~ ESC[D */
-                read(fdin, &ch[0], 1);
-                if (rval == -1) {
-                    printf("Read errror... \n\r");
-                    return 0;
-                }
-
-                /* Repeat previous command? */
-                previous_cmd = retrieve_hist_cmd(ch[0],
-                                                read_buf,
-                                                CMDBUF_SIZE,
-                                                is_first_arrow_key);
-                if (previous_cmd) {
-                    int previous_cmd_len = strlen(previous_cmd);
-                    int i = 0;
-
-                    /* Update command line */
-                    curr_char = strlen(read_buf);
-                    printf("\r%s%s", prompt, read_buf);
-
-                    /* Toggle is_first_arrow_key */
-                    if (is_first_arrow_key == RT_YES) {
-                        is_first_arrow_key = RT_NO;
-                    }
-
-                    /* Clear a line to avoid display pslp due to previous
-                     * is ps and help
-                     *
-                     * The overhead should be acceptable based on the
-                     * assumption that user key events cost should be much 
-                     * less than other tasks */
-
-                     if (curr_char < previous_cmd_len) {
-                         for (i = 0; i < (previous_cmd_len - curr_char); i++) {
-                             printf(" ");
-                         }
-                     }
-                     continue;
-                }
-
-                /* Home:      ESC[1~
-                 * End:       ESC[2~
-                 * Insert:    ESC[3~
-                 * Delete:    ESC[4~
-                 * Page up:   ESC[5~
-                 * Page down: ESC[6~ */
-                if (ch[0] >= '1' && ch[0] <= '6') {
-                    read(fdin, &ch[0], 1);
-                    if (rval == -1) {
-                        printf("Read errror... \n\r");
-                        return 0;
-                    }
-                }
-                continue;
-            }
-        }
-
-        /* If the byte is an end-of-line type character, then
-         * finish the string and inidcate we are done.
-         */
-        if (curr_char == (CMDBUF_SIZE - 2) || \
-            (ch[0] == '\r') || (ch[0] == '\n')) {
-            *(read_buf + curr_char) = '\n';
-            *(read_buf + curr_char + 1) = '\0';
-            break;
-        }
-        else if (ch[0] == ESC) {
-            last_char_is_ESC = RT_YES;
-        }
-        /* Skip control characters. man ascii for more information */
-        else if (ch[0] < 0x20) {
-            continue;
-        }
-        else if (ch[0] == BACKSPACE) { /* backspace */
-            if (curr_char > 0) {
-                curr_char--;
-                printf("\b \b");
-            }
-        }
-        else {
-            /* Appends only when buffer is not full.
-             * Include \n\0 */
-            if (curr_char < (CMDBUF_SIZE - 3)) {
-                *(read_buf + curr_char++) = ch[0];
-                puts(ch);
-            }
-        }
-    }
-    printf("\n\r");
-
-    return read_buf;
-}
-
-static void cat_buf(const char *buf, int buf_size)
-{
-    int i = 0;
-
-    if (buf == 0 || buf_size <= 0) {
+    if (i != CMD_COUNT) {
         return;
     }
 
-    /* Bad implementation */
-    for (i = 0; i < buf_size; i++) {
-        printf("%c", buf[i]);
-        if (buf[i] == '\n') {
-            printf("\r");
-        }
+    int child = fork();
+
+    if (child < 0) {
+        write(fdout, "No more thread can be allocated", 33);
+        write(fdout, next_line, 3);
+    }
+    else if (child) {
+        int status;
+        waitpid(child, &status, 0);
+    }
+    else {
+        /* Try full path */
+        execvpe(argv[0], argv, NULL);
+
+        /* Try /bin/ */
+        strcpy(path, "/bin/");
+        strcpy(path + 5, argv[0]);
+        execvpe(path, argv, NULL);
+
+        /* Error */
+        write(fdout, argv[0], strlen(argv[0]) + 1);
+        write(fdout, ": command not found", 20);
+        write(fdout, next_line, 3);
+        exit(-1);
     }
 }
-/* return 0 means path itself is a absolute path. 
- * retrun 1 means abspath was append 
- * TODO? snprintf */
-static int to_abs_path(const char *path, char * abs_path)
+
+void find_events()
 {
-    /* Append prefix if needed */
-    if (path[0] != '/') {
-        /* / is a special case */
-        if (strlen(g_cwd) > 1) {
-            sprintf(abs_path, "%s/%s", g_cwd, path);
-        }
-        else {
-            sprintf(abs_path, "%s%s", g_cwd, path);
-        }
-        return 1;
-    }
-    return 0;
-}
-/************************
- * Command handlers
-*************************/
-void cmd_ls(int argc, char *argv[])
-{
-    RT_DIR dir_handler = 0;
-    char abs_path[PATH_MAX] = {0};
-    char *list_file = g_cwd;
-    struct dirent *p_dirent;
-    int rval = 0;
-
-    struct stat fstat;
-    if (argc > 2) {
-        printf("ls only suppurt at most one argument\n\r");
-    }
-
-    if (argc == 2) {
-        list_file = argv[1];
-
-        if (to_abs_path(argv[1], abs_path)) {
-            list_file = abs_path;
-        }
-    }
-
-    /* Make sure path is corrent stat */
-    if (strcmp(list_file, "/") != 0) {
-        rval = stat(list_file, &fstat);
-        if (rval == -1) {
-            printf("Stat failed. Maybe file does not exit?\n\r");
-            return;
-        }
-    }
-
-    dir_handler = opendir(list_file);
-    if (dir_handler == -1) {
-        printf("opendir failed. Maybe file does not exit?\n\r");
-        return;
-    }
-
-
-    printf("cwd:%s\n\r", g_cwd);
-    printf("(d)ir/(f)ile\tsize\tname\n\r", g_cwd);
-    p_dirent = readdir(dir_handler);
-    while (p_dirent) {
-        printf("%s\t\t%d\t%s\n\r", p_dirent->isdir?"(d)":"(f)",
-                                 p_dirent->len,
-                                 p_dirent->name);
-
-        p_dirent = readdir(dir_handler);
-    }
-
-    rval = closedir(dir_handler);
-    if (rval == -1) {
-        printf("closedor failed. Maybe file does not exit?\n\r");
-        return;
-    }
-
-}
-
-void cmd_cd(int argc, char *argv[])
-{
-    int rval = 0;
-    char abs_path[PATH_MAX] = {0};
-    char *cd_dir = abs_path;
-    struct stat fstat;
-
-    if (argc > 2) {
-        printf("ls only suppurt at most one argument\n\r");
-    }
-
-    if (argc == 1) {
-        printf("%s\n\r", g_cwd);
-        return;
-    }
-
-    /* Append prefix if needed */
-    if (to_abs_path(argv[1], abs_path) == 0) {
-        cd_dir = argv[1];
-    }
-
-    /* / is a special case, it does not really exist */
-    if (strcmp(cd_dir, "/")) {
-        rval = stat(cd_dir, &fstat);
-        if (rval == -1 || fstat.isdir == 0) {
-            printf("Stat failed. Maybe file does not exit or is not a directory?\n\r");
-            return;
-        }
-    }
-
-    strncpy(g_cwd, cd_dir, PATH_MAX);
-}
-
-
-void cmd_cat(int argc, char *argv[])
-{
-    int rval = CMDBUF_SIZE;
-    int fd = 0;
     char buf[CMDBUF_SIZE];
-    char abs_path[PATH_MAX] = {0};
-    char *cat_file = abs_path;
-    struct stat fstat;
+    char *p = cmd[cur_his];
+    char *q;
+    int i;
 
-    /* Current only one file*/
-    if (argc != 2) {
-        printf("Usage: %s filename\n\r", argv[0]);
-        return;
-    }
-
-    /* Convert to absolute path if needed */
-    if (to_abs_path(argv[1], abs_path) == 0) {
-        cat_file = argv[1];
-    }
-
-    /* Is it a file? */
-    stat(cat_file, &fstat);
-    if (fstat.isdir == 1) {
-        printf("You are trying to cat a directory\n\r");
-        return;
-    }
-
-    /* Open file */
-    fd = open(cat_file, 0);
-    if (fd == -1) {
-        printf("Open file %s failed\n\r", argv[1]);
-        return;
-    }
-
-    printf("\n\r");
-    /* Read file */
-    lseek(fd, 0, SEEK_SET);
-
-    while (rval != 0) {
-        rval = read(fd, buf, CMDBUF_SIZE);
-        if (rval == -1) {
-            printf("Read file %s failed\n\r", argv[1]);
-            return;
+    for (; *p; p++) {
+        if (*p == '!') {
+            q = p;
+            while (*q && !isspace((int)*q))
+                q++;
+            for (i = cur_his + HISTORY_COUNT - 1; i > cur_his; i--) {
+                if (!strncmp(cmd[i % HISTORY_COUNT], p + 1, q - p - 1)) {
+                    strcpy(buf, q);
+                    strcpy(p, cmd[i % HISTORY_COUNT]);
+                    p += strlen(p);
+                    strcpy(p--, buf);
+                    break;
+                }
+            }
         }
-
-        cat_buf(buf, rval);
     }
-    printf("\n\r");
 }
 
-/* export */
-void cmd_export(int argc, char *argv[])
+char *find_envvar(const char *name)
 {
-    char *env_var_val;
+    int i;
+
+    for (i = 0; i < env_count; i++) {
+        if (!strcmp(env_var[i].name, name))
+            return env_var[i].value;
+    }
+
+    return NULL;
+}
+
+/* Fill in entire value of argument. */
+int fill_arg(char *const dest, const char *argv)
+{
+    char env_name[MAX_ENVNAME + 1];
+    char *buf = dest;
+    char *p = NULL;
+
+    for (; *argv; argv++) {
+        if (isalnum((int)*argv) || *argv == '_') {
+            if (p)
+                *p++ = *argv;
+            else
+                *buf++ = *argv;
+        }
+        else {   /* Symbols. */
+            if (p) {
+                *p = '\0';
+                p = find_envvar(env_name);
+                if (p) {
+                    strcpy(buf, p);
+                    buf += strlen(p);
+                    p = NULL;
+                }
+            }
+            if (*argv == '$')
+                p = env_name;
+            else
+                *buf++ = *argv;
+        }
+    }
+    if (p) {
+        *p = '\0';
+        p = find_envvar(env_name);
+        if (p) {
+            strcpy(buf, p);
+            buf += strlen(p);
+        }
+    }
+    *buf = '\0';
+
+    return buf - dest;
+}
+
+//export
+void export_envvar(int argc, char *argv[])
+{
+    char *found;
     char *value;
     int i;
 
@@ -607,133 +306,96 @@ void cmd_export(int argc, char *argv[])
             value++;
         if (*value)
             *value++ = '\0';
-        env_var_val = get_env_var_val(argv[i]);
-        if (env_var_val)
-            strcpy(env_var_val, value);
-        else if (g_env_var_count < MAX_ENVCOUNT) {
-            strcpy(g_env_var[g_env_var_count].name, argv[i]);
-            strcpy(g_env_var[g_env_var_count].value, value);
-            g_env_var_count++;
+        found = find_envvar(argv[i]);
+        if (found)
+            strcpy(found, value);
+        else if (env_count < MAX_ENVCOUNT) {
+            strcpy(env_var[env_count].name, argv[i]);
+            strcpy(env_var[env_count].value, value);
+            env_count++;
         }
     }
 }
 
-/* ps */
-void cmd_ps(int argc, char* argv[])
+//this function helps to show int
+
+void itoa(int n, char *dst, int base)
 {
-    char ps_message[] = "TID\tSTATUS\tPRIORITY";
-    char *str_to_output = 0;
-    int task_i;
+    char buf[33] = {0};
+    char *p = &buf[32];
 
-    printf("%s\n\r", ps_message);
+    if (n == 0)
+        *--p = '0';
+    else {
+        unsigned int num = (base == 10 && num < 0) ? -n : n;
 
-    for (task_i = 0; task_i < g_task_count; task_i++) {
-        char task_info_tid[2];
-        char task_info_status[2];
-        char task_info_priority[MAX_ITOA_CHARS];
-
-        task_info_tid[0]='0'+g_tasks[task_i].tid;
-        task_info_tid[1]='\0';
-        task_info_status[0]='0'+g_tasks[task_i].status;
-        task_info_status[1]='\0';
-
-        str_to_output = itoa(g_tasks[task_i].priority, task_info_priority);
-
-        printf("%s\t%s\t%s\n\r", task_info_tid, task_info_status, str_to_output);
+        for (; num; num /= base)
+            * --p = "0123456789ABCDEF" [num % base];
+        if (base == 10 && n < 0)
+            *--p = '-';
     }
+
+    strcpy(dst, p);
 }
 
-/* help */
-void cmd_help(int argc, char* argv[])
+//help
+
+void show_cmd_info(int argc, char *argv[])
 {
+    const char help_desp[] = "This system has commands as follow\n\r\0";
     int i;
 
-    printf("Available commands:\n\n\r");
+    write(fdout, &help_desp, sizeof(help_desp));
     for (i = 0; i < CMD_COUNT; i++) {
-        printf("%s\t<-- %s\n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
+        write(fdout, cmd_data[i].cmd, strlen(cmd_data[i].cmd) + 1);
+        write(fdout, ": ", 3);
+        write(fdout, cmd_data[i].description, strlen(cmd_data[i].description) + 1);
+        write(fdout, next_line, 3);
     }
-
-    printf("\nMore details:\n\r");
-    printf("\tEnviorment variable supported:\n\r");
-    printf("\tSet-> export VAR=VAL\n\r");
-    printf("\tGet-> $VAR\n\n\r");
-
-    printf("\tYou can use ! to run command in history.\n\r");
-    printf("\tEx: !p to run ps if ps is in history\n\n\r");
 }
 
-/* echo */
-void cmd_echo(int argc, char* argv[])
-{
-    const int _n = 1; /* Flag for "-n" option. */
-    int flag = 0;
-    int i;
-
-    for (i = 1; i < argc; i++) {
-        if (!strcmp(argv[i], "-n"))
-            flag |= _n;
-        else
-            break;
-    }
-
-    for (; i < argc; i++) {
-        printf("%s", argv[i]);
-        if (i < argc - 1)
-            printf(" ");
-    }
-
-    if (~flag & _n)
-        printf("\n\r");
-}
-
-/* man */
-void cmd_man(int argc, char *argv[])
+//man
+void show_man_page(int argc, char *argv[])
 {
     int i;
 
     if (argc < 2)
         return;
 
-    for (i = 0; i < CMD_COUNT && strcmp(g_available_cmds[i].cmd, argv[1]); i++)
+    for (i = 0; i < CMD_COUNT && strcmp(cmd_data[i].cmd, argv[1]); i++)
         ;
 
     if (i >= CMD_COUNT)
         return;
 
-    printf("NAME: %s\n\rDESCRIPTION:%s \n\r", g_available_cmds[i].cmd, g_available_cmds[i].desc);
+    write(fdout, "NAME: ", 7);
+    write(fdout, cmd_data[i].cmd, strlen(cmd_data[i].cmd) + 1);
+    write(fdout, next_line, 3);
+    write(fdout, "DESCRIPTION: ", 14);
+    write(fdout, cmd_data[i].description, strlen(cmd_data[i].description) + 1);
+    write(fdout, next_line, 3);
 }
 
-void cmd_history(int argc, char *argv[])
+void show_history(int argc, char *argv[])
 {
     int i;
 
-    for (i = g_cur_cmd_hist_pos + 1; i <= g_cur_cmd_hist_pos + HISTORY_COUNT; i++) {
-        if (g_typed_cmds[i % HISTORY_COUNT][0]) {
-            printf("%s\r", g_typed_cmds[i % HISTORY_COUNT]);
+    for (i = cur_his + 1; i <= cur_his + HISTORY_COUNT; i++) {
+        if (cmd[i % HISTORY_COUNT][0]) {
+            write(fdout, cmd[i % HISTORY_COUNT], strlen(cmd[i % HISTORY_COUNT]) + 1);
+            write(fdout, next_line, 3);
         }
     }
 }
 
-/**************************
- * task to handle commands
-***************************/
-void shell_task()
+void write_blank(int blank_num)
 {
-    char *read_str = 0;
-    char prompt[PATH_MAX * 2];
+    char blank[] = " ";
+    int blank_count = 0;
 
-    cmd_help(0, 0);
-    for (;; g_cur_cmd_hist_pos = (g_cur_cmd_hist_pos + 1) % HISTORY_COUNT) {
-        sprintf(prompt, "%s%s$ ", PROMPT, g_cwd);
-        read_str = readline(prompt);
-        if (!read_str || read_str[0] == '\n') {
-            continue;
-        }
-
-        strncpy(g_typed_cmds[g_cur_cmd_hist_pos], read_str, CMDBUF_SIZE);
-        run_cmd(); /* cmd string passed by g_typed_cmds */
-        free(read_str);
-        read_str = 0;
+    while (blank_count <= blank_num) {
+        write(fdout, blank, sizeof(blank));
+        blank_count++;
     }
 }
 

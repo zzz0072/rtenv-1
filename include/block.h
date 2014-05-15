@@ -7,15 +7,16 @@
 #define BLOCK_CMD_READ 1
 #define BLOCK_CMD_WRITE 2
 #define BLOCK_CMD_SEEK 3
+#define BLOCK_CMD_MMAP 4
 
 struct block {
     struct file file;
-    int driver_tid;
+    int driver_pid;
     struct file *driver_file;
     int event;
 
     /* request */
-    int request_tid;
+    int request_pid;
     int buzy;
     int pos;
     char buf[BLOCK_BUF];
@@ -32,8 +33,10 @@ struct block_request {
     int pos;
 };
 
-int block_init(int fd, int driver_tid, struct file *files[],
+int block_init(int fd, int driver_pid, struct file *files[],
                struct memory_pool *memory_pool, struct event_monitor *monitor);
+int block_deinit (struct file *file, struct file_request *request,
+                  struct event_monitor *monitor);
 int block_response(int fd, char *buf, int len);
 int block_readable (struct file *file, struct file_request *request,
                     struct event_monitor *monitor);

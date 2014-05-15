@@ -1,17 +1,64 @@
 #include "path.h"
 
-#include "file.h"
 #include "kconfig.h"
-#include "rt_string.h"
-#include "rt_dirent.h"
+#include "string.h"
 #include "syscall.h"
 #include "fs.h"
+#include "object-pool.h"
+#include "module.h"
+#include "kernel.h"
+
+
+#define PATH_STACK_SIZE 1024
 
 struct mount {
     int fs;
     int dev;
     char path[PATH_MAX];
 };
+
+struct path {
+    char name[PATH_MAX];
+    int driver;
+    int is_cache;
+    int ref_count;
+};
+
+
+void pathserver();
+void path_module_init();
+
+MODULE_DECLARE(path, path_module_init);
+DECLARE_OBJECT_POOL(struct path, paths, PATH_LIMIT);
+
+void path_module_init()
+{
+    int pid;
+    struct task_control_block *task;
+
+    pid = kernel_create_task(pathserver);
+    if (pid < 0)
+        return;
+
+    task = task_get(pid);
+    task_set_priority(task, 0);
+    task_set_stack_size(task, PATH_STACK_SIZE);
+}
+
+inline int path_get_fd(struct object_pool *paths, struct path *path)
+{
+    int i = object_pool_find(paths, path);
+
+    if (i != -1)
+        return i + 3 + TASK_LIMIT;
+    else
+        return -1;
+}
+
+inline struct path *path_get_by_fd(struct object_pool *paths, int fd)
+{
+    return object_pool_get(paths, fd - 3 - TASK_LIMIT);
+}
 
 /*
  * pathserver assumes that all files are FIFOs that were registered
@@ -24,8 +71,7 @@ struct mount {
  */
 void pathserver()
 {
-    char paths[FILE_LIMIT - TASK_LIMIT - 3][PATH_MAX];
-    int npaths = 0;
+    struct path *path;
     int fs_fds[FS_LIMIT];
     char fs_types[FS_LIMIT][FS_TYPE_MAX];
     int nfs_types = 0;
@@ -33,279 +79,225 @@ void pathserver()
     int nmounts = 0;
     int i = 0;
     int cmd = 0;
-    size_t path_len = 0;
+    unsigned int plen = 0;
     unsigned int replyfd = 0;
-    char path[PATH_MAX];
+    char pathname[PATH_MAX];
     int dev = 0;
     int newfd = 0;
     char fs_type[FS_TYPE_MAX];
     int status;
+    struct object_pool_cursor cursor;
 
-    memcpy(paths[npaths++], PATH_SERVER_NAME, sizeof(PATH_SERVER_NAME));
+    /* register itself */
+    path = object_pool_register(&paths, 0);
+    memcpy(path->name, PATH_SERVER_NAME, sizeof(PATH_SERVER_NAME));
 
     while (1) {
-        read(PATHSERVER_FD, &cmd, INT_SIZE);
-        read(PATHSERVER_FD, &replyfd, INT_SIZE);
+        read(PATHSERVER_FD, &cmd, 4);
+        read(PATHSERVER_FD, &replyfd, 4);
 
         switch (cmd) {
-            case PATH_CMD_MKFILE:
-                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                read(PATHSERVER_FD, path, path_len);
-                read(PATHSERVER_FD, &dev, INT_SIZE);
-                newfd = npaths + 3 + TASK_LIMIT;
-                if (mknod(newfd, 0, dev) == 0) {
-                    memcpy(paths[npaths], path, path_len);
-                    npaths++;
+        case PATH_CMD_MKFILE:
+            read(PATHSERVER_FD, &plen, 4);
+            read(PATHSERVER_FD, pathname, plen);
+            read(PATHSERVER_FD, &dev, 4);
+            path = object_pool_allocate(&paths);
+            newfd = path_get_fd(&paths, path);
+
+            if (path && mknod(newfd, 0, dev) == 0) {
+                memcpy(path->name, pathname, plen);
+                path->driver = -1;
+                path->is_cache = 0;
+            }
+            else {
+                object_pool_free(&paths, path);
+            }
+            write(replyfd, &newfd, 4);
+            break;
+
+        case PATH_CMD_OPEN:
+            read(PATHSERVER_FD, &plen, 4);
+            read(PATHSERVER_FD, pathname, plen);
+            /* Search for path */
+            object_pool_for_each(&paths, cursor, path) {
+                if (*path->name && strcmp(pathname, path->name) == 0) {
+                    if (path->is_cache)
+                        path->ref_count++;
+
+                    status = path_get_fd(&paths, path);
+                    write(replyfd, &status, 4);
+                    break;
+                }
+            }
+
+            if (!object_pool_cursor_end(&paths, cursor)) {
+                break;
+            }
+
+            /* Search for mount point */
+            for (i = nmounts - 1; i >= 0; i--) {
+                if (*mounts[i].path
+                    && strncmp(pathname, mounts[i].path,
+                               strlen(mounts[i].path)) == 0) {
+                    int mlen = strlen(mounts[i].path);
+                    struct fs_request request;
+                    request.cmd = FS_CMD_OPEN;
+                    request.from = replyfd;
+                    request.device = mounts[i].dev;
+                    request.pos = mlen; /* search starting position */
+                    memcpy(request.path, pathname, plen);
+                    write(mounts[i].fs, &request, sizeof(request));
+                    i = 0;
+                    break;
+                }
+            }
+
+            if (i < 0) {
+                i = -1; /* Error: not found */
+                write(replyfd, &i, 4);
+            }
+            break;
+
+        case PATH_CMD_REGISTER_PATH:
+            read(PATHSERVER_FD, &plen, 4);
+            read(PATHSERVER_FD, pathname, plen);
+            path = object_pool_allocate(&paths);
+            newfd = path_get_fd(&paths, path);
+            if (path) {
+                memcpy(path->name, pathname, plen);
+                path->driver = replyfd;
+
+                /* Check whether is file system path cache */
+                for (i = 0; i < nmounts; i++) {
+                    if (mounts[i].fs == replyfd)
+                        break;
+                }
+                if (i < nmounts) {
+                    path->is_cache = 1;
+                    path->ref_count = 1;
                 }
                 else {
-                    newfd = -1;
+                    path->is_cache = 0;
                 }
-                write(replyfd, &newfd, INT_SIZE);
-                break;
+            }
+            else {
+                object_pool_free(&paths, path);
+            }
+            write(replyfd, &newfd, 4);
+            break;
 
-            case PATH_CMD_OPEN:
-                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                read(PATHSERVER_FD, path, path_len);
-
-                /* Search files in paths[] first path is assigned while
-                 * mkfifo or path_register was called */
-                for (i = 0; i < npaths; i++) {
-                    if (*paths[i] && strcmp(path, paths[i]) == 0) {
-                        i += 3; /* 0-2 are reserved */
-                        i += TASK_LIMIT; /* FDs reserved for tasks */
-                        write(replyfd, &i, INT_SIZE);
-                        i = 0;
-                        break;
+        case PATH_CMD_DEREGISTER_PATH:
+            read(PATHSERVER_FD, &plen, 4);
+            read(PATHSERVER_FD, pathname, plen);
+            status = -1;
+            /* Search for path */
+            object_pool_for_each(&paths, cursor, path) {
+                if (*path->name && strcmp(pathname, path->name) == 0) {
+                    if (path->driver == replyfd) {
+                        status = 0;
+                        object_pool_free(&paths, path);
                     }
-                }
-
-                if (i < npaths) {
                     break;
                 }
+            }
+            write(replyfd, &status, 4);
+            break;
 
-                /* Search for mount point if its no opened romfs file,
-                 * or FIFO file with mkfifo.
-                 *
-                 * This is done by sending FS_CMD_OPEN request.
-                 * path_register will be called eventually */
-                for (i = 0; i < nmounts; i++) {
-                    if (*mounts[i].path
-                            && strncmp(path, mounts[i].path,
-                                       strlen(mounts[i].path)) == 0) {
-                        int mlen = strlen(mounts[i].path);
-                        struct fs_request request;
-                        request.cmd = FS_CMD_OPEN;
-                        request.from = replyfd;
-                        request.device = mounts[i].dev;
-                        request.pos = mlen; /* search starting position */
-                        memcpy(request.path, &path, path_len);
-                        write(mounts[i].fs, &request, sizeof(request));
-                        i = 0;
-                        break;
-                    }
-                }
+        case PATH_CMD_REGISTER_FS:
+            read(PATHSERVER_FD, &plen, 4);
+            read(PATHSERVER_FD, fs_type, plen);
+            fs_fds[nfs_types] = replyfd;
+            memcpy(fs_types[nfs_types], fs_type, plen);
+            nfs_types++;
+            i = 0;
+            write(replyfd, &i, 4);
+            break;
 
-                if (i >= nmounts) {
-                    i = -1; /* Error: not found */
-                    write(replyfd, &i, INT_SIZE);
-                }
-                break;
+        case PATH_CMD_MOUNT: {
+            int slen;
+            int dlen;
+            int tlen;
+            char src[PATH_MAX];
+            char dst[PATH_MAX];
+            char type[FS_TYPE_MAX];
+            read(PATHSERVER_FD, &slen, 4);
+            read(PATHSERVER_FD, src, slen);
+            read(PATHSERVER_FD, &dlen, 4);
+            read(PATHSERVER_FD, dst, dlen);
+            read(PATHSERVER_FD, &tlen, 4);
+            read(PATHSERVER_FD, type, tlen);
 
-            case PATH_CMD_STAT:
-                {
-                    struct stat fstat = {0};
-
-                    status = 0;
-                    /* Get file name */
-                    read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                    read(PATHSERVER_FD, path, path_len);
-
-                    /* Get file stat, response was sent by mounted fs */
-                    for (i = 0; i < nmounts; i++) {
-                        if (*mounts[i].path
-                                && strncmp(path, mounts[i].path,
-                                           strlen(mounts[i].path)) == 0) {
-                            int mlen = strlen(mounts[i].path);
-                            struct fs_request request;
-                            request.cmd = FS_CMD_STAT;
-                            request.from = replyfd;
-                            request.device = mounts[i].dev;
-                            request.pos = mlen; /* search starting position */
-                            memcpy(request.path, &path, path_len);
-                            write(mounts[i].fs, &request, sizeof(request));
-                            break;
-                        }
-                    }
-
-                    /* Not found */
-                    if (i >= nmounts) {
-                        status = -1;
-                        write(replyfd, &fstat, sizeof(fstat));
-                        write(replyfd, &status, INT_SIZE);
-                    }
-                } break;
-
-            case PATH_CMD_OPENDIR:
-                {
-                    status = 0;
-                    /* Get file name */
-                    read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                    read(PATHSERVER_FD, path, path_len);
-
-                    /* Forward request, response was sent by mounted fs */
-                    for (i = 0; i < nmounts; i++) {
-                        if (*mounts[i].path
-                                && strncmp(path, mounts[i].path,
-                                           strlen(mounts[i].path)) == 0) {
-                            int mlen = strlen(mounts[i].path);
-                            struct fs_request request;
-                            request.cmd = FS_CMD_OPENDIR;
-                            request.from = replyfd;
-                            request.device = mounts[i].dev;
-                            request.pos = mlen; /* search starting position */
-                            memcpy(request.path, &path, path_len);
-                            write(mounts[i].fs, &request, sizeof(request));
-                            break;
-                        }
-                    }
-
-                    /* Not found */
-                    if (i >= nmounts) {
-                        status = -1;
-                        write(replyfd, &status, INT_SIZE);
-                    }
-                } break;
-
-            case PATH_CMD_CLOSEDIR:
-                {
-                    status = 0;
-                    RT_DIR dir = 0;
-                    /* Get file name */
-                    read(PATHSERVER_FD, &dir, sizeof(RT_DIR));
-
-                    /* Forward request, response was sent by mounted fs */
-                    for (i = 0; i < nmounts; i++) {
-                        if (*mounts[i].path
-                                && strncmp(path, mounts[i].path,
-                                           strlen(mounts[i].path)) == 0) {
-                            struct fs_request request;
-                            request.cmd = FS_CMD_CLOSEDIR;
-                            request.from = replyfd;
-                            request.device = mounts[i].dev;
-                            request.pos = (int)dir; /* DIR is the same as int */
-                            write(mounts[i].fs, &request, sizeof(request));
-                            break;
-                        }
-                    }
-
-                    /* Not found */
-                    if (i >= nmounts) {
-                        status = -1;
-                        write(replyfd, &status, sizeof(RT_DIR));
-                    }
-                } break;
-
-            case PATH_CMD_READDIR:
-                {
-                    status = 0;
-                    RT_DIR dir = 0;
-                    /* Get file name */
-                    read(PATHSERVER_FD, &dir, sizeof(RT_DIR));
-
-                    /* Forward request, response was sent by mounted fs */
-                    for (i = 0; i < nmounts; i++) {
-                        if (*mounts[i].path
-                                && strncmp(path, mounts[i].path,
-                                           strlen(mounts[i].path)) == 0) {
-                            struct fs_request request;
-                            request.cmd = FS_CMD_READDIR;
-                            request.from = replyfd;
-                            request.device = mounts[i].dev;
-                            request.pos = (int)dir; /* DIR is the same as int */
-                            write(mounts[i].fs, &request, sizeof(request));
-                            break;
-                        }
-                    }
-
-                    /* Not found */
-                    if (i >= nmounts) {
-                        status = -1;
-                        write(replyfd, &status, sizeof(RT_DIR));
-                    }
-                } break;
-
-            case PATH_CMD_REGISTER_PATH:
-                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                read(PATHSERVER_FD, path, path_len);
-                newfd = npaths + 3 + TASK_LIMIT;
-                memcpy(paths[npaths], path, path_len);
-                npaths++;
-                write(replyfd, &newfd, INT_SIZE);
-                break;
-
-            case PATH_CMD_REGISTER_FS:
-                read(PATHSERVER_FD, &path_len, SIZE_T_SIZE);
-                read(PATHSERVER_FD, fs_type, path_len);
-                fs_fds[nfs_types] = replyfd;
-                memcpy(fs_types[nfs_types], fs_type, path_len);
-                nfs_types++;
-                i = 0;
-                write(replyfd, &i, INT_SIZE);
-                break;
-
-            case PATH_CMD_MOUNT: {
-                size_t slen;
-                size_t dlen;
-                size_t tlen;
-                char src[PATH_MAX];
-                char dst[PATH_MAX];
-                char type[FS_TYPE_MAX];
-                read(PATHSERVER_FD, &slen, SIZE_T_SIZE);
-                read(PATHSERVER_FD, src, slen);
-                read(PATHSERVER_FD, &dlen, SIZE_T_SIZE);
-                read(PATHSERVER_FD, dst, dlen);
-                read(PATHSERVER_FD, &tlen, SIZE_T_SIZE);
-                read(PATHSERVER_FD, type, tlen);
-
-                /* Search for filesystem types */
-                for (i = 0; i < nfs_types; i++) {
-                    if (*fs_types[i] && strcmp(type, fs_types[i]) == 0) {
-                        break;
-                    }
-                }
-
-                if (i >= nfs_types) {
-                    status = -1; /* Error: not found */
-                    write(replyfd, &status, INT_SIZE);
+            /* Search for filesystem types */
+            for (i = 0; i < nfs_types; i++) {
+                if (*fs_types[i] && strcmp(type, fs_types[i]) == 0) {
                     break;
                 }
+            }
 
-                mounts[nmounts].fs = fs_fds[i];
+            if (i >= nfs_types) {
+                status = -1; /* Error: not found */
+                write(replyfd, &status, 4);
+                break;
+            }
 
+            mounts[nmounts].fs = fs_fds[i];
+
+
+            if (*src) {
                 /* Search for device */
-                for (i = 0; i < npaths; i++) {
-                    if (*paths[i] && strcmp(src, paths[i]) == 0) {
+                object_pool_for_each(&paths, cursor, path) {
+                    if (*path->name && strcmp(src, path->name) == 0) {
                         break;
                     }
                 }
 
-                if (i >= npaths) {
+                if (object_pool_cursor_end(&paths, cursor)) {
                     status = -1; /* Error: not found */
-                    write(replyfd, &status, INT_SIZE);
+                    write(replyfd, &status, 4);
                     break;
                 }
 
-                /* Store mount point */
-                mounts[nmounts].dev = i + 3 + TASK_LIMIT;
-                memcpy(mounts[nmounts].path, dst, dlen);
-                nmounts++;
+                dev = path_get_fd(&paths, path);
+            }
+            else {
+                dev = -1;
+            }
 
-                status = 0;
-                write(replyfd, &status, INT_SIZE);
-            }   break;
+            /* Store mount point */
+            mounts[nmounts].dev = dev;
+            memcpy(mounts[nmounts].path, dst, dlen);
+            nmounts++;
 
-            default:
-                ;
+            status = 0;
+            write(replyfd, &status, 4);
+        }
+        break;
+
+        case PATH_CMD_CLOSE:
+            read(PATHSERVER_FD, &i, 4);
+            path = path_get_by_fd(&paths, i);
+            status = 0;
+
+            if (path) {
+                if (path->is_cache && !--path->ref_count) {
+                    struct fs_request request;
+                    request.cmd = FS_CMD_CLOSE;
+                    request.target = i;
+                    write(path->driver, &request, sizeof(request));
+
+                    object_pool_free(&paths, path);
+                    rmnod(i);
+                }
+            }
+            else {
+                status = -1;
+            }
+
+            write(replyfd, &status, 4);
+            break;
+
+        default:
+            ;
         }
     }
 }
@@ -313,19 +305,39 @@ void pathserver()
 int path_register(const char *pathname)
 {
     int cmd = PATH_CMD_REGISTER_PATH;
-    unsigned int replyfd = gettid() + 3;
-    size_t path_len = strlen(pathname)+1;
+    unsigned int replyfd = getpid() + 3;
+    size_t plen = strlen(pathname) + 1;
     int fd = -1;
-    char buf[INT_SIZE + INT_SIZE + INT_SIZE + PATH_MAX];
+    char buf[4 + 4 + 4 + PATH_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, INT_SIZE, pos);
-    path_write_data(buf, &replyfd, INT_SIZE, pos);
-    path_write_data(buf, &path_len, SIZE_T_SIZE, pos);
-    path_write_data(buf, pathname, path_len, pos);
+    path_write_data(buf, &cmd, 4, pos);
+    path_write_data(buf, &replyfd, 4, pos);
+    path_write_data(buf, &plen, 4, pos);
+    path_write_data(buf, pathname, plen, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &fd, INT_SIZE);
+    read(replyfd, &fd, 4);
+
+    return fd;
+}
+
+int path_deregister(const char *pathname)
+{
+    int cmd = PATH_CMD_DEREGISTER_PATH;
+    unsigned int replyfd = getpid() + 3;
+    size_t plen = strlen(pathname) + 1;
+    int fd = -1;
+    char buf[4 + 4 + 4 + PATH_MAX];
+    int pos = 0;
+
+    path_write_data(buf, &cmd, 4, pos);
+    path_write_data(buf, &replyfd, 4, pos);
+    path_write_data(buf, &plen, 4, pos);
+    path_write_data(buf, pathname, plen, pos);
+
+    write(PATHSERVER_FD, buf, pos);
+    read(replyfd, &fd, 4);
 
     return fd;
 }
@@ -333,19 +345,19 @@ int path_register(const char *pathname)
 int path_register_fs(const char *type)
 {
     int cmd = PATH_CMD_REGISTER_FS;
-    unsigned int replyfd = gettid() + 3;
-    size_t type_len = strlen(type)+1;
+    unsigned int replyfd = getpid() + 3;
+    size_t plen = strlen(type) + 1;
     int fd = -1;
-    char buf[INT_SIZE + INT_SIZE + SIZE_T_SIZE + PATH_MAX];
+    char buf[4 + 4 + 4 + PATH_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, INT_SIZE, pos);
-    path_write_data(buf, &replyfd, INT_SIZE, pos);
-    path_write_data(buf, &type_len, SIZE_T_SIZE, pos);
-    path_write_data(buf, type, type_len, pos);
+    path_write_data(buf, &cmd, 4, pos);
+    path_write_data(buf, &replyfd, 4, pos);
+    path_write_data(buf, &plen, 4, pos);
+    path_write_data(buf, type, plen, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &fd, INT_SIZE);
+    read(replyfd, &fd, 4);
 
     return fd;
 }
@@ -353,32 +365,25 @@ int path_register_fs(const char *type)
 int mount(const char *src, const char *dst, const char *type, int flags)
 {
     int cmd = PATH_CMD_MOUNT;
-    unsigned int replyfd = gettid() + 3;
-    size_t slen = strlen(src)+1;
+    unsigned int replyfd = getpid() + 3;
+    size_t slen = strlen(src) + 1;
     size_t dlen = strlen(dst) + 1;
     size_t tlen = strlen(type) + 1;
     int status;
-    char buf[INT_SIZE +
-             INT_SIZE +
-             SIZE_T_SIZE +
-             PATH_MAX +
-             SIZE_T_SIZE +
-             PATH_MAX +
-             SIZE_T_SIZE +
-             FS_TYPE_MAX];
+    char buf[4 + 4 + 4 + PATH_MAX + 4 + PATH_MAX + 4 + FS_TYPE_MAX];
     int pos = 0;
 
-    path_write_data(buf, &cmd, INT_SIZE, pos);
-    path_write_data(buf, &replyfd, INT_SIZE, pos);
-    path_write_data(buf, &slen, SIZE_T_SIZE, pos);
+    path_write_data(buf, &cmd, 4, pos);
+    path_write_data(buf, &replyfd, 4, pos);
+    path_write_data(buf, &slen, 4, pos);
     path_write_data(buf, src, slen, pos);
-    path_write_data(buf, &dlen, SIZE_T_SIZE, pos);
+    path_write_data(buf, &dlen, 4, pos);
     path_write_data(buf, dst, dlen, pos);
-    path_write_data(buf, &tlen, SIZE_T_SIZE, pos);
+    path_write_data(buf, &tlen, 4, pos);
     path_write_data(buf, type, tlen, pos);
 
     write(PATHSERVER_FD, buf, pos);
-    read(replyfd, &status, INT_SIZE);
+    read(replyfd, &status, 4);
 
     return status;
 }

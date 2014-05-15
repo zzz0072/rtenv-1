@@ -7,13 +7,12 @@
 
 
 static struct file_operations mq_ops = {
-    .readable = mq_readable,
-    .writable = mq_writable,
-    .read = mq_read,
-    .write = mq_write,
-    .lseekable = NULL,
-    .lseek = NULL,
+    .deinit = mq_deinit,
+    .read = mq_readable,
+    .write = mq_writable,
 };
+
+DECLARE_OBJECT_POOL(struct pipe_ringbuffer, mqueues, MQUEUE_LIMIT);
 
 int mq_open(const char *name, int oflag)
 {
@@ -27,8 +26,9 @@ mq_init(int fd, int driver_pid, struct file *files[],
         struct memory_pool *memory_pool, struct event_monitor *monitor)
 {
     struct pipe_ringbuffer *pipe;
+    struct event *event;
 
-    pipe = memory_pool_alloc(memory_pool, sizeof(struct pipe_ringbuffer));
+    pipe = object_pool_allocate(&mqueues);
 
     if (!pipe)
         return -1;
@@ -38,17 +38,32 @@ mq_init(int fd, int driver_pid, struct file *files[],
     pipe->file.ops = &mq_ops;
     files[fd] = &pipe->file;
 
-    pipe->read_event = event_monitor_find_free(monitor);
-    event_monitor_register(monitor, pipe->read_event, pipe_read_release, files[fd]);
+    event = event_monitor_allocate(monitor, pipe_read_release, files[fd]);
+    pipe->read_event = event_monitor_find(monitor, event);
 
-    pipe->write_event = event_monitor_find_free(monitor);
-    event_monitor_register(monitor, pipe->write_event, pipe_write_release, files[fd]);
+    event = event_monitor_allocate(monitor, pipe_write_release, files[fd]);
+    pipe->write_event = event_monitor_find(monitor, event);
     return 0;
 }
 
 int
-mq_readable (struct file *file, struct file_request *request,
-             struct event_monitor *monitor)
+mq_deinit(struct file *file, struct file_request *request,
+          struct event_monitor *monitor)
+{
+    struct pipe_ringbuffer *pipe =
+        container_of(file, struct pipe_ringbuffer, file);
+
+    event_monitor_free(monitor, pipe->read_event);
+    event_monitor_free(monitor, pipe->write_event);
+
+    object_pool_free(&mqueues, pipe);
+
+    return 0;
+}
+
+int
+mq_readable(struct file *file, struct file_request *request,
+            struct event_monitor *monitor)
 {
     size_t msg_len;
 
@@ -68,12 +83,12 @@ mq_readable (struct file *file, struct file_request *request,
         /* Trying to read more than buffer size */
         return FILE_ACCESS_ERROR;
     }
-    return FILE_ACCESS_ACCEPT;
+    return mq_read(file, request, monitor);
 }
 
 int
-mq_writable (struct file *file, struct file_request *request,
-             struct event_monitor *monitor)
+mq_writable(struct file *file, struct file_request *request,
+            struct event_monitor *monitor)
 {
     size_t total_len = sizeof(size_t) + request->size;
     struct pipe_ringbuffer *pipe =
@@ -89,12 +104,12 @@ mq_writable (struct file *file, struct file_request *request,
         event_monitor_block(monitor, pipe->write_event, request->task);
         return FILE_ACCESS_BLOCK;
     }
-    return FILE_ACCESS_ACCEPT;
+    return mq_write(file, request, monitor);
 }
 
 int
-mq_read (struct file *file, struct file_request *request,
-         struct event_monitor *monitor)
+mq_read(struct file *file, struct file_request *request,
+        struct event_monitor *monitor)
 {
     size_t msg_len;
     size_t i;
@@ -103,7 +118,7 @@ mq_read (struct file *file, struct file_request *request,
 
     /* Get length */
     for (i = 0; i < 4; i++) {
-        PIPE_POP(*pipe, *(((char*)&msg_len)+i));
+        PIPE_POP(*pipe, *(((char *)&msg_len) + i));
     }
     /* Copy data into buf */
     for (i = 0; i < msg_len; i++) {
@@ -116,8 +131,8 @@ mq_read (struct file *file, struct file_request *request,
 }
 
 int
-mq_write (struct file *file, struct file_request *request,
-          struct event_monitor *monitor)
+mq_write(struct file *file, struct file_request *request,
+         struct event_monitor *monitor)
 {
     size_t i;
     struct pipe_ringbuffer *pipe =
@@ -125,10 +140,10 @@ mq_write (struct file *file, struct file_request *request,
 
     /* Copy count into pipe */
     for (i = 0; i < sizeof(size_t); i++)
-        PIPE_PUSH(*pipe,*(((char*)&request->size)+i));
+        PIPE_PUSH(*pipe, *(((char *)&request->size) + i));
     /* Copy data into pipe */
     for (i = 0; i < request->size; i++)
-        PIPE_PUSH(*pipe,request->buf[i]);
+        PIPE_PUSH(*pipe, request->buf[i]);
 
     /* Prepared to read */
     event_monitor_release(monitor, pipe->read_event);

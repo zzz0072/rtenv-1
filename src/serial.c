@@ -1,15 +1,33 @@
+#include "serial.h"
+
 #include "syscall.h"
-#include "kconfig.h"
+#include "file.h"
 #include "fifo.h"
-#include "mqueue.h"
-#include "stm32f10x.h"
-void serialout(USART_TypeDef* uart, unsigned int intr)
+#include "program.h"
+
+void serial_out_main();
+void serial_in_main();
+
+PROGRAM_DECLARE(serialin, serial_in_main);
+PROGRAM_DECLARE(serialout, serial_out_main);
+
+
+void serialout(USART_TypeDef *uart, unsigned int intr)
 {
     int fd;
     char c;
     int doread = 1;
     mkfifo("/dev/tty0/out", 0);
     fd = open("/dev/tty0/out", 0);
+
+    if (fd < 0) {
+        const char *p = "Can not open tty0 :-(\n";
+        while (*p) {
+            while (USART_GetFlagStatus(uart, USART_FLAG_TXE) == RESET);
+            USART_SendData(uart, *p++);
+        }
+        while (1);
+    }
 
     while (1) {
         if (doread)
@@ -25,7 +43,13 @@ void serialout(USART_TypeDef* uart, unsigned int intr)
     }
 }
 
-void serialin(USART_TypeDef* uart, unsigned int intr)
+void serial_out_main()
+{
+    setpriority(0, 1);
+    serialout(USART2, USART2_IRQn);
+}
+
+void serialin(USART_TypeDef *uart, unsigned int intr)
 {
     int fd;
     char c;
@@ -43,30 +67,8 @@ void serialin(USART_TypeDef* uart, unsigned int intr)
     }
 }
 
-void rs232_xmit_msg_task()
+void serial_in_main()
 {
-    int fdout;
-    int fdin;
-    char str[100];
-    int curr_char;
-
-    fdout = open("/dev/tty0/out", 0);
-    fdin = mq_open("/tmp/mqueue/out", O_CREAT);
-    setpriority(0, PRIORITY_DEFAULT - 2);
-
-    while (1) {
-        /* Read from the queue.  Keep trying until a message is
-         * received.  This will block for a period of time (specified
-         * by portMAX_DELAY). */
-        read(fdin, str, 100);
-
-        /* Write each character of the message to the RS232 port. */
-        curr_char = 0;
-        while (str[curr_char] != '\0') {
-            write(fdout, &str[curr_char], 1);
-            curr_char++;
-        }
-    }
+    setpriority(0, 1);
+    serialin(USART2, USART2_IRQn);
 }
-
-
