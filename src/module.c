@@ -1,6 +1,5 @@
 #include "module.h"
 
-
 void module_run_init()
 {
     extern struct module _smodule;

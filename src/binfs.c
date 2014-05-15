@@ -8,19 +8,15 @@
 #include "string.h"
 #include "file.h"
 
-
 struct binfs_file {
     int fd;
     struct program *program;
 };
 
-
 void binfs_server();
 void binfs_module_init();
 
-
 MODULE_DECLARE(binfs, binfs_module_init);
-
 
 void binfs_module_init()
 {

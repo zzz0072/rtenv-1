@@ -11,7 +11,6 @@
 #include "module.h"
 #include "kernel.h"
 
-
 #define PROCFS_STACK_SIZE 1024
 
 struct procfs_file {
@@ -20,7 +19,6 @@ struct procfs_file {
     int status;
     int priority;
 };
-
 
 void procfs_server();
 void procfs_module_init();

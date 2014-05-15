@@ -1,9 +1,5 @@
 #include "stack-pool.h"
-
-
-
 #include "string.h"
-
 
 void stack_pool_init(struct stack_pool *pool, struct object_pool *stacks)
 {

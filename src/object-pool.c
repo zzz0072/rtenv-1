@@ -1,8 +1,6 @@
-#include "object-pool.h"
-
-#include "bitmap.h"
 #include <stddef.h>
-
+#include "object-pool.h"
+#include "bitmap.h"
 
 void object_pool_init(struct object_pool *pool)
 {

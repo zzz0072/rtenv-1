@@ -28,7 +28,6 @@ struct romfs_entry {
     uint8_t name[PATH_MAX];
 };
 
-
 void romfs_server();
 void romfs_module_init();
 

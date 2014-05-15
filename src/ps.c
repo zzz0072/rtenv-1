@@ -4,7 +4,6 @@
 #include "file.h"
 #include "string.h"
 
-
 #define PS_PATH_LEN 16
 
 int ps(int argc, char *argv[]);

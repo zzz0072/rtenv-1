@@ -1,10 +1,7 @@
-#include "mqueue.h"
-
 #include <stddef.h>
 #include "utils.h"
 #include "pipe.h"
-
-
+#include "mqueue.h"
 
 static struct file_operations mq_ops = {
     .deinit = mq_deinit,

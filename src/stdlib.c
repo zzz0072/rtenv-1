@@ -2,8 +2,6 @@
 #include "file.h"
 #include "syscall.h"
 
-
-
 int atoi(const char *nptr)
 {
     int n = 0;
@@ -24,8 +22,6 @@ int atoi(const char *nptr)
 
     return sign * n;
 }
-
-
 
 int execvpe(const char *file, char *const argv[], char *const envp[])
 {

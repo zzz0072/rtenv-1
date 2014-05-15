@@ -1,5 +1,4 @@
 #include "path.h"
-
 #include "kconfig.h"
 #include "string.h"
 #include "syscall.h"
@@ -7,7 +6,6 @@
 #include "object-pool.h"
 #include "module.h"
 #include "kernel.h"
-
 
 #define PATH_STACK_SIZE 1024
 
@@ -23,7 +21,6 @@ struct path {
     int is_cache;
     int ref_count;
 };
-
 
 void pathserver();
 void path_module_init();

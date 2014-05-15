@@ -2,7 +2,6 @@
 #include "stm32f10x.h"
 #include "resource.h"
 #include "syscall.h"
-
 #include "path.h"
 #include "romdev.h"
 #include "romfs.h"
@@ -14,7 +13,6 @@
 #include "file.h"
 #include "ctype.h"
 #include "string.h"
-
 
 int read_str(int fd, char *str, int n, char *next)
 {

@@ -1,7 +1,5 @@
-#include "bitmap.h"
-
 #include <stdint.h>
-
+#include "bitmap.h"
 
 void *bitmap_addr(void *addr, int bit)
 {

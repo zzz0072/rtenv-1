@@ -11,7 +11,6 @@ void serial_in_main();
 PROGRAM_DECLARE(serialin, serial_in_main);
 PROGRAM_DECLARE(serialout, serial_out_main);
 
-
 void serialout(USART_TypeDef *uart, unsigned int intr)
 {
     int fd;

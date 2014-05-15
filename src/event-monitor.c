@@ -1,8 +1,6 @@
 #include "event-monitor.h"
-
 #include "list.h"
 #include "bitmap.h"
-
 
 void event_monitor_init(struct event_monitor *monitor,
                         struct object_pool *events,

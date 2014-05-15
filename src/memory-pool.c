@@ -1,7 +1,5 @@
 #include "memory-pool.h"
 
-
-
 void memory_pool_init(struct memory_pool *pool, size_t size, char *memory)
 {
     pool->offset = 0;

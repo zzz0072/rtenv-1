@@ -1,7 +1,5 @@
 #include "pipe.h"
 
-
-
 int pipe_read_release(struct event_monitor *monitor, int event,
                       struct task_control_block *task, void *data)
 {

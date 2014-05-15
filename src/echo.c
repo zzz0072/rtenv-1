@@ -3,8 +3,6 @@
 #include "syscall.h"
 #include "file.h"
 
-
-
 int echo(int argc, char *argv[]);
 
 PROGRAM_DECLARE(echo, echo);

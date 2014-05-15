@@ -69,9 +69,7 @@ typedef struct {
 evar_entry env_var[MAX_ENVCOUNT];
 int env_count = 0;
 
-
 PROGRAM_DECLARE(shell, shell_init);
-
 
 void shell_init()
 {

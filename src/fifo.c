@@ -1,9 +1,6 @@
 #include "fifo.h"
-
 #include "pipe.h"
 #include "utils.h"
-
-
 
 static struct file_operations fifo_ops = {
     .deinit = fifo_deinit,
@@ -133,4 +130,3 @@ fifo_write(struct file *file, struct file_request *request,
     event_monitor_release(monitor, pipe->read_event);
     return request->size;
 }
-
