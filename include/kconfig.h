@@ -5,10 +5,10 @@
 
 /* Task */
 #define TASK_LIMIT 16  /* Max number of tasks we can handle */
-#define STACK_DEFAULT_SIZE 512
+#define STACK_DEFAULT_SIZE 2048
 
 /* Stack Chunk */
-#define STACK_TOTAL 0x2800
+#define STACK_TOTAL 0x5000
 #define STACK_CHUNK_SIZE 512
 #define STACK_LIMIT (STACK_TOTAL / STACK_CHUNK_SIZE)
 
